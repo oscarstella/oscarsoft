@@ -50,6 +50,8 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 80px;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
@@ -57,8 +59,16 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
+  width: 100%;
+  position: relative;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+}
+
+#root, .portfolio-app {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Custom Scrollbar */
@@ -78,9 +88,16 @@ body {
 
 /* Layout Utilities */
 .container {
+  width: 100%;
   max-width: 1220px;
   margin: 0 auto;
   padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 0 16px;
+  }
 }
 
 .gradient-text {

@@ -284,16 +284,21 @@ export default function App() {
             <li><a href="#services" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Servicios</a></li>
             <li><a href="#skills" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Stack</a></li>
             <li><a href="#contact" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Contacto</a></li>
+            <li className="mobile-menu-cta">
+              <a href="#contact" className="btn-primary" onClick={() => setMobileMenuOpen(false)}>
+                Contrátame
+              </a>
+            </li>
           </ul>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <a href="#contact" className="btn-hire">Contrátame</a>
+          <div className="nav-actions">
+            <a href="#contact" className="btn-hire btn-hire-nav">Contrátame</a>
             <button 
               className="nav-toggle" 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Abrir menú"
+              aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
