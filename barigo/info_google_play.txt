@@ -1,0 +1,53 @@
+# INFORMACIÓN Y DATOS PARA GOOGLE PLAY CONSOLE - BARIGO
+
+Sitio Web Oficial:
+https://oscarsoft.click/barigo/
+
+URL de Política de Privacidad (Privacy Policy):
+https://oscarsoft.click/barigo/privacy.html
+
+URL de Términos y Condiciones (Terms of Service):
+https://oscarsoft.click/barigo/terms.html
+
+URL de Solicitud de Eliminación de Cuenta y Datos (Data Deletion Request):
+https://oscarsoft.click/barigo/delete-account.html
+
+-------------------------------------------------------------
+1. APP DE CHOFER (CONDUCTOR)
+-------------------------------------------------------------
+- Nombre de la App: BariGo Chofer
+- Nombre del Paquete (Package Name / Application ID): com.barigo.chofer
+- Archivo AAB generado: aab/BariGo_Chofer.aab
+- Categoría: Mapas y navegación / Viajes y guías locales
+- Clasificación de contenido: Para mayores de 18 años
+- Acceso a la app (Credenciales para revisores de Google):
+    * Modo de acceso: Algunas funciones están restringidas (Login)
+    * Nombre / Rol: Conductor de prueba
+    * Email / Usuario: chofer@barigo.com
+    * Contraseña / PIN: 123456
+    * Instrucciones: Ingresar con el correo indicado y código de prueba para acceder al panel de chofer y ver viajes asignados.
+
+- Permisos destacados y justificación para Google:
+    * ACCESS_FINE_LOCATION / ACCESS_BACKGROUND_LOCATION:
+      "La aplicación requiere acceso a la ubicación precisa y en segundo plano mientras el chofer está en servicio para calcular rutas, recibir alertas de viajes cercanos y permitir que el pasajero siga la llegada del vehículo en tiempo real durante el viaje."
+    * FOREGROUND_SERVICE_LOCATION:
+      "Se ejecuta como servicio en primer plano mientras el chofer está en viaje o disponible para mantener la conexión GPS activa sin interrupciones del sistema operativo."
+
+-------------------------------------------------------------
+2. APP DE PASAJERO (CLIENTE)
+-------------------------------------------------------------
+- Nombre de la App: BariGo Pasajero
+- Nombre del Paquete (Package Name / Application ID): com.barigo.pasajero
+- Archivo AAB generado: aab/BariGo_Pasajero.aab
+- Categoría: Mapas y navegación / Viajes y guías locales
+- Clasificación de contenido: Para todo público / Mayores de 13/18 años
+- Acceso a la app (Credenciales para revisores de Google):
+    * Modo de acceso: Algunas funciones están restringidas (Login)
+    * Nombre / Rol: Pasajero de prueba
+    * Email / Usuario: pasajero@barigo.com
+    * Contraseña / PIN: 123456
+    * Instrucciones: Ingresar con el correo indicado para acceder a la pantalla principal de solicitud y seguimiento de viajes.
+
+- Permisos destacados y justificación para Google:
+    * ACCESS_FINE_LOCATION:
+      "Se utiliza para detectar el punto de partida del pasajero en Bariloche y mostrar los vehículos cercanos disponibles."

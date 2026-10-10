@@ -1,0 +1,126 @@
+{
+  "users": [
+    {
+      "id": "usr-admin-1",
+      "email": "admin@barigo.app",
+      "password": "$2a$10$VlZ6dyWtVz7g9HTZvC9tpOvetL8fv3qjMbUWaBoPckNpZPAbVYuLS",
+      "fullName": "Administrador BariGo",
+      "phone": "+5492944001122",
+      "role": "admin",
+      "createdAt": "2026-10-10T13:33:11.588Z"
+    },
+    {
+      "id": "usr-pasajero-1",
+      "email": "pasajero@barigo.app",
+      "password": "$2a$10$VlZ6dyWtVz7g9HTZvC9tpOvetL8fv3qjMbUWaBoPckNpZPAbVYuLS",
+      "fullName": "Martina Bariloche",
+      "phone": "+5492944112233",
+      "role": "passenger",
+      "createdAt": "2026-10-10T13:33:11.590Z"
+    },
+    {
+      "id": "usr-chofer-1",
+      "email": "chofer1@barigo.app",
+      "password": "$2a$10$VlZ6dyWtVz7g9HTZvC9tpOvetL8fv3qjMbUWaBoPckNpZPAbVYuLS",
+      "fullName": "Carlos Nahuel Huapi",
+      "phone": "+5492944223344",
+      "role": "driver",
+      "createdAt": "2026-10-10T13:33:11.590Z"
+    },
+    {
+      "id": "usr-chofer-2",
+      "email": "chofer2@barigo.app",
+      "password": "$2a$10$VlZ6dyWtVz7g9HTZvC9tpOvetL8fv3qjMbUWaBoPckNpZPAbVYuLS",
+      "fullName": "Esteban Melipal",
+      "phone": "+5492944334455",
+      "role": "driver",
+      "createdAt": "2026-10-10T13:33:11.590Z"
+    }
+  ],
+  "driverProfiles": {
+    "usr-chofer-1": {
+      "id": "usr-chofer-1",
+      "vehicleMake": "Chevrolet",
+      "vehicleModel": "Onix Joy",
+      "vehicleYear": 2021,
+      "vehiclePlate": "AF 342 BZ",
+      "vehicleColor": "Blanco",
+      "doorsCount": 4,
+      "hasAirConditioning": true,
+      "hasSnowChains": true,
+      "hasFireExtinguisher": true,
+      "verificationStatus": "approved",
+      "ratingAvg": 4.95,
+      "totalTrips": 184
+    },
+    "usr-chofer-2": {
+      "id": "usr-chofer-2",
+      "vehicleMake": "Toyota",
+      "vehicleModel": "Etios Sedan",
+      "vehicleYear": 2022,
+      "vehiclePlate": "AG 881 KP",
+      "vehicleColor": "Gris Plata",
+      "doorsCount": 4,
+      "hasAirConditioning": true,
+      "hasSnowChains": true,
+      "hasFireExtinguisher": true,
+      "verificationStatus": "approved",
+      "ratingAvg": 4.88,
+      "totalTrips": 92
+    }
+  },
+  "driverPasses": [
+    {
+      "id": "pass-1",
+      "driverId": "usr-chofer-1",
+      "amountPaid": 4500,
+      "startedAt": "2026-10-10T13:33:11.590Z",
+      "expiresAt": "2026-10-11T13:33:11.590Z",
+      "paymentStatus": "approved",
+      "paymentMethod": "mercadopago"
+    },
+    {
+      "id": "pass-2",
+      "driverId": "usr-chofer-2",
+      "amountPaid": 4500,
+      "startedAt": "2026-10-10T13:33:11.590Z",
+      "expiresAt": "2026-10-11T13:33:11.590Z",
+      "paymentStatus": "approved",
+      "paymentMethod": "mercadopago"
+    }
+  ],
+  "driverLocations": {
+    "usr-chofer-1": {
+      "driverId": "usr-chofer-1",
+      "lat": -41.135,
+      "lng": -71.305,
+      "heading": 90,
+      "speed": 25,
+      "isOnline": true,
+      "isBusy": false,
+      "lastUpdated": "2026-10-10T13:33:11.590Z"
+    },
+    "usr-chofer-2": {
+      "driverId": "usr-chofer-2",
+      "lat": -41.129,
+      "lng": -71.358,
+      "heading": 270,
+      "speed": 40,
+      "isOnline": true,
+      "isBusy": false,
+      "lastUpdated": "2026-10-10T13:33:11.590Z"
+    }
+  },
+  "rides": [],
+  "reviews": [],
+  "systemSettings": {
+    "baseFare": 1200,
+    "perKmRate": 650,
+    "perMinuteRate": 120,
+    "driverPass24hPrice": 4500,
+    "minRideFare": 2000,
+    "nightMultiplier": 1.2,
+    "currency": "ARS",
+    "symbol": "$"
+  }
+}

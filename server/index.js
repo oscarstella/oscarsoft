@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
@@ -184,9 +185,56 @@ app.post('/api/contact', async (req, res) => {
   });
 });
 
-// Servir archivos estáticos del frontend React compilado
+// Proxy API requests from oscarsoft.com.ar/api/barigo al backend BariGo (puerto 5055)
+app.use('/api/barigo', async (req, res) => {
+  try {
+    const targetUrl = `http://127.0.0.1:5055/api${req.url}`;
+    const headers = { ...req.headers };
+    delete headers.host;
+    delete headers.connection;
+
+    const options = {
+      method: req.method,
+      headers
+    };
+
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
+      options.body = JSON.stringify(req.body);
+      headers['content-type'] = 'application/json';
+    }
+
+    const response = await fetch(targetUrl, options);
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const data = await response.json();
+      return res.status(response.status).json(data);
+    } else {
+      const text = await response.text();
+      return res.status(response.status).send(text);
+    }
+  } catch (err) {
+    return res.status(502).json({
+      error: 'BariGo Backend no disponible en puerto 5055',
+      details: err.message
+    });
+  }
+});
+
+// Servir BariGo Web en /barigo
+const barigoDistPath = path.join(__dirname, '../barigo/web/dist');
+if (fs.existsSync(barigoDistPath)) {
+  app.use('/barigo', express.static(barigoDistPath));
+  app.use((req, res, next) => {
+    if (req.originalUrl === '/barigo' || req.originalUrl.startsWith('/barigo/')) {
+      return res.sendFile(path.join(barigoDistPath, 'index.html'));
+    }
+    next();
+  });
+}
+
+// Servir archivos estáticos del frontend principal React compilado
 const distPath = path.join(__dirname, '../client/dist');
-const fs = require('fs');
 
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));

@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "BariGo",
+    "slug": "barigo-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#070d18"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.oscarsoft.barigo",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "BariGo necesita tu ubicación para calcular tarifas y enviar choferes en Bariloche.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "BariGo requiere ubicación en segundo plano para el seguimiento del chofer y seguridad del viaje."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#070d18"
+      },
+      "package": "com.oscarsoft.barigo",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permite que BariGo rastree tu viaje en Bariloche de forma continua."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#06b6d4"
+        }
+      ]
+    ]
+  }
+}
