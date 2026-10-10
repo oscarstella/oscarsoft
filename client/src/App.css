@@ -1136,6 +1136,14 @@
   font-weight: 700;
 }
 
+.contact-info-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .hero {
@@ -1167,8 +1175,17 @@
     gap: 45px;
   }
   .contact-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+  .contact-form-wrap {
+    order: 1; /* Form goes FIRST on mobile for immediate access! */
+    width: 100%;
+  }
+  .contact-info {
+    order: 2; /* Trust badges appear directly below */
+    width: 100%;
   }
 }
 
@@ -1234,10 +1251,10 @@
     padding: 95px 0 50px;
   }
   .hero-title {
-    font-size: clamp(2rem, 6.5vw, 2.8rem);
+    font-size: clamp(1.85rem, 6.5vw, 2.8rem);
   }
   .hero-subtitle {
-    font-size: clamp(1.05rem, 4vw, 1.35rem);
+    font-size: clamp(1rem, 4vw, 1.35rem);
     gap: 4px;
   }
   .hero-img-wrapper {
@@ -1343,6 +1360,11 @@
   .contact-form-wrap {
     padding: 24px 18px;
   }
+  .contact-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
   .form-row {
     grid-template-columns: 1fr;
     gap: 14px;
@@ -1389,6 +1411,13 @@
   }
 }
 
+@media (max-width: 540px) {
+  .contact-items {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
 @media (max-width: 480px) {
   .btn-hire-nav {
     display: none; /* Hide from navbar header on narrow screens to prevent crowding; accessible via mobile menu */
@@ -1404,20 +1433,54 @@
     justify-content: center;
   }
   .hero-stats {
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
   }
   .stat-divider {
     display: none;
   }
   .hero-stats .stat {
-    flex: 1 1 30%;
     text-align: center;
   }
-  .badge-react { top: 4%; left: -6px; }
-  .badge-node { bottom: 8%; left: -6px; }
-  .badge-flutter { bottom: 2%; right: -6px; }
+  .stat-num {
+    font-size: 1.35rem;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+  }
+  .badge-react { top: 4%; left: -4px; }
+  .badge-node { bottom: 8%; left: -4px; }
+  .badge-flutter { bottom: 2%; right: -4px; }
   .modal-content {
     padding: 22px 14px;
     border-radius: var(--radius-md);
+  }
+}
+
+@media (max-width: 360px) {
+  .nav-container {
+    padding: 0 10px;
+  }
+  .nav-logo {
+    font-size: 1.05rem;
+  }
+  .hero-title {
+    font-size: 1.7rem;
+  }
+  .contact-form-wrap {
+    padding: 18px 12px;
+  }
+  .contact-item {
+    padding: 12px 10px;
+    gap: 10px;
+  }
+  .contact-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .contact-value {
+    font-size: 0.88rem;
   }
 }

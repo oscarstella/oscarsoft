@@ -690,35 +690,35 @@ export default function App() {
               </p>
 
               <div className="contact-items">
-                <a href="mailto:oscarns@gmail.com" className="contact-item">
-                  <div className="contact-icon"><Mail size={22} /></div>
+                <div className="contact-item">
+                  <div className="contact-icon"><Clock size={22} /></div>
                   <div>
-                    <span className="contact-label">Email Principal</span>
-                    <span className="contact-value">oscarns@gmail.com</span>
+                    <span className="contact-label">Tiempo de Respuesta</span>
+                    <span className="contact-value">Menos de 24 horas hábiles</span>
                   </div>
-                </a>
+                </div>
+
+                <div className="contact-item">
+                  <div className="contact-icon"><CheckCircle2 size={22} /></div>
+                  <div>
+                    <span className="contact-label">Presupuesto a Medida</span>
+                    <span className="contact-value">Propuesta técnica y cotización sin costo</span>
+                  </div>
+                </div>
 
                 <div className="contact-item">
                   <div className="contact-icon"><Globe size={22} /></div>
                   <div>
-                    <span className="contact-label">Dominio & Marca</span>
-                    <span className="contact-value">oscarsoft.com.ar / oscarsoft.click</span>
+                    <span className="contact-label">Modalidad & Alcance</span>
+                    <span className="contact-value">Remoto para Argentina & Clientes Internacionales</span>
                   </div>
                 </div>
 
                 <div className="contact-item">
-                  <div className="contact-icon"><MapPin size={22} /></div>
+                  <div className="contact-icon"><ShieldCheck size={22} /></div>
                   <div>
-                    <span className="contact-label">Ubicación</span>
-                    <span className="contact-value">Argentina 🇦🇷 (Remoto & Internacional)</span>
-                  </div>
-                </div>
-
-                <div className="contact-item">
-                  <div className="contact-icon"><Clock size={22} /></div>
-                  <div>
-                    <span className="contact-label">Disponibilidad</span>
-                    <span className="contact-value">Lunes a Viernes, 9:00 - 19:00 hs</span>
+                    <span className="contact-label">Seguridad & Privacidad</span>
+                    <span className="contact-value">100% de confidencialidad de tu proyecto</span>
                   </div>
                 </div>
               </div>
@@ -927,9 +927,11 @@ export default function App() {
           <div className="footer-bottom">
             <p>© {new Date().getFullYear()} Oscar Nicolás Stella - OscarSoft. Todos los derechos reservados.</p>
             <div>
-              <a href="mailto:oscarns@gmail.com">oscarns@gmail.com</a>
-              <span style={{ margin: '0 10px' }}>•</span>
-              <span style={{ color: '#06b6d4' }}>oscarsoft.com.ar</span>
+              <a href="#contact" style={{ color: '#818cf8', textDecoration: 'none', fontWeight: 600 }}>
+                Contacto vía Formulario
+              </a>
+              <span style={{ margin: '0 10px', opacity: 0.5 }}>•</span>
+              <span style={{ color: '#06b6d4', fontWeight: 600 }}>oscarsoft.com.ar</span>
             </div>
           </div>
         </div>

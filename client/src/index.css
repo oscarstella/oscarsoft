@@ -86,6 +86,15 @@ body {
   background: var(--accent-1);
 }
 
+img, svg, video, canvas, audio, iframe, embed, object {
+  max-width: 100%;
+  height: auto;
+}
+
+section[id] {
+  scroll-margin-top: 90px;
+}
+
 /* Layout Utilities */
 .container {
   width: 100%;
@@ -97,6 +106,12 @@ body {
 @media (max-width: 640px) {
   .container {
     padding: 0 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    padding: 0 12px;
   }
 }
 
