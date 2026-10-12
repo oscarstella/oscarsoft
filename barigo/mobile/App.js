@@ -1,47 +1,61 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { StyleSheet, View, Text, StatusBar, LogBox, TouchableOpacity } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import PassengerScreen from './src/screens/PassengerScreen';
 import DriverScreen from './src/screens/DriverScreen';
 
+// Silenciar advertencias de desarrollo y conexión en pantalla móvil (Cannot connect to Metro/Expo CLI)
+LogBox.ignoreAllLogs(true);
+
+/**
+ * BariGo Bariloche - Aplicación Móvil Oficial
+ * Soporta modo Pasajero y modo Chofer en tiempo real.
+ */
 export default function App() {
-  const [role, setRole] = useState('passenger'); // 'passenger' | 'driver'
+  const [activeRole, setActiveRole] = useState('passenger'); // 'passenger' | 'driver'
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#070d18" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor="#070d18" />
 
-      {/* Selector Superior de Rol (Pasajero / Chofer) */}
-      <View style={styles.roleBar}>
-        <View style={styles.logoRow}>
-          <Text style={styles.logoText}>
-            <Text style={{ color: '#06b6d4' }}>Bari</Text>
-            <Text style={{ color: '#10b981' }}>Go</Text>
-          </Text>
-          <Text style={styles.cityTag}>Bariloche</Text>
+        {/* Header Superior Limpio BariGo */}
+        <View style={styles.headerBar}>
+          <View style={styles.brandRow}>
+            <Text style={styles.brandLogo}>
+              <Text style={{ color: '#06b6d4' }}>Bari</Text>
+              <Text style={{ color: '#10b981' }}>Go</Text>
+            </Text>
+            <View style={styles.tagBadge}>
+              <Text style={styles.tagText}>Bariloche</Text>
+            </View>
+          </View>
+
+          {/* Selector Rápido de Rol: Pasajero / Chofer para probar con 2 celulares */}
+          <View style={styles.roleToggleGroup}>
+            <TouchableOpacity 
+              style={[styles.roleTab, activeRole === 'passenger' && styles.roleTabActive]} 
+              onPress={() => setActiveRole('passenger')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.roleTabText, activeRole === 'passenger' && styles.roleTabTextActive]}>👤 Pasajero</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.roleTab, activeRole === 'driver' && styles.roleTabActive]} 
+              onPress={() => setActiveRole('driver')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.roleTabText, activeRole === 'driver' && styles.roleTabTextActive]}>🚗 Chofer</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabBtn, role === 'passenger' && styles.tabBtnActive]} 
-            onPress={() => setRole('passenger')}
-          >
-            <Text style={[styles.tabText, role === 'passenger' && styles.tabTextActive]}>Pasajero</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.tabBtn, role === 'driver' && styles.tabBtnActive]} 
-            onPress={() => setRole('driver')}
-          >
-            <Text style={[styles.tabText, role === 'driver' && styles.tabTextActive]}>Chofer</Text>
-          </TouchableOpacity>
+        {/* Pantalla Activa según Rol */}
+        <View style={styles.screenBody}>
+          {activeRole === 'passenger' ? <PassengerScreen /> : <DriverScreen />}
         </View>
-      </View>
-
-      {/* Pantalla Activa */}
-      <View style={styles.screenContainer}>
-        {role === 'passenger' ? <PassengerScreen /> : <DriverScreen />}
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -50,34 +64,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#070d18'
   },
-  roleBar: {
+  headerBar: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderColor: '#1e293b',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#070d18'
+    backgroundColor: '#070d18',
+    zIndex: 10
   },
-  logoRow: {
+  brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6
+    gap: 8
   },
-  logoText: {
+  brandLogo: {
     fontSize: 22,
-    fontWeight: 'bold'
+    fontWeight: '900',
+    letterSpacing: 0.5
   },
-  cityTag: {
-    fontSize: 11,
-    color: '#94a3b8',
+  tagBadge: {
     backgroundColor: '#131f37',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 8
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1e293b'
   },
-  tabContainer: {
+  tagText: {
+    fontSize: 10,
+    color: '#38bdf8',
+    fontWeight: '700',
+    textTransform: 'uppercase'
+  },
+  cityStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1e293b'
+  },
+  livePulse: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#10b981'
+  },
+  cityStatusText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  roleToggleGroup: {
     flexDirection: 'row',
     backgroundColor: '#0f172a',
     borderRadius: 20,
@@ -85,23 +129,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1e293b'
   },
-  tabBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
+  roleTab: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 16
   },
-  tabBtnActive: {
-    backgroundColor: '#06b6d4'
+  roleTabActive: {
+    backgroundColor: '#1e293b'
   },
-  tabText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: 'bold'
+  roleTabText: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600'
   },
-  tabTextActive: {
-    color: '#070d18'
+  roleTabTextActive: {
+    color: '#38bdf8',
+    fontWeight: '700'
   },
-  screenContainer: {
+  screenBody: {
     flex: 1
   }
 });

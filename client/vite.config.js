@@ -10,6 +10,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5050',
         changeOrigin: true,
+      },
+      '/barigo': {
+        target: 'http://localhost:5050',
+        changeOrigin: true,
       }
     }
   }

@@ -27,20 +27,20 @@ exports.estimateFare = (req, res) => {
   });
 };
 
+const { dispatchRideExpandingRings } = require('../sockets/socketHandler');
+
 // Solicitar viaje
 exports.requestRide = (req, res) => {
-  const {
-    originAddress,
-    originLat,
-    originLng,
-    destinationAddress,
-    destinationLat,
-    destinationLng,
-    paymentMethod
-  } = req.body;
+  const originAddress = req.body.originAddress || req.body.originText;
+  const originLat = req.body.originLat || req.body.originCoord?.lat;
+  const originLng = req.body.originLng || req.body.originCoord?.lng;
+  const destinationAddress = req.body.destinationAddress || req.body.destText;
+  const destinationLat = req.body.destinationLat || req.body.destCoord?.lat;
+  const destinationLng = req.body.destinationLng || req.body.destCoord?.lng;
+  const paymentMethod = req.body.paymentMethod || 'cash';
 
   if (!originAddress || !originLat || !originLng || !destinationAddress || !destinationLat || !destinationLng) {
-    return res.status(400).json({ error: 'Datos de viaje incompletos' });
+    return res.status(400).json({ error: 'Datos de viaje incompletos (origen y destino requeridos)' });
   }
 
   const distanceKm = calculateDistanceKm(
@@ -52,9 +52,17 @@ exports.requestRide = (req, res) => {
   const durationMinutes = estimateDurationMinutes(distanceKm);
   const fareInfo = calculateFare(distanceKm, durationMinutes);
 
+  const passengerUser = req.user || {
+    id: 'usr-pasajero-1',
+    fullName: req.body.passengerName || 'Oscar Stella',
+    phone: req.body.passengerPhone || '+5492944001122'
+  };
+
   const newRide = {
-    id: 'ride-' + Date.now(),
-    passengerId: req.user.id,
+    id: req.body.id || ('ride-' + Date.now()),
+    passengerId: passengerUser.id,
+    passengerName: passengerUser.fullName,
+    passengerPhone: passengerUser.phone,
     driverId: null,
     status: 'requested',
     originAddress,
@@ -63,27 +71,21 @@ exports.requestRide = (req, res) => {
     destinationAddress,
     destinationLat: Number(destinationLat),
     destinationLng: Number(destinationLng),
-    estimatedDistanceKm: distanceKm,
-    estimatedDurationMins: durationMinutes,
-    estimatedFare: fareInfo.totalFare,
-    finalFare: fareInfo.totalFare,
-    paymentMethod: paymentMethod || 'cash',
+    estimatedDistanceKm: req.body.distanceKm ? Number(req.body.distanceKm) : distanceKm,
+    estimatedDurationMins: req.body.durationMins ? Number(req.body.durationMins) : durationMinutes,
+    estimatedFare: req.body.fare ? Number(req.body.fare) : fareInfo.totalFare,
+    finalFare: req.body.fare ? Number(req.body.fare) : fareInfo.totalFare,
+    paymentMethod,
+    category: req.body.category || 'BariGo Estándar',
     requestedAt: new Date().toISOString()
   };
 
   db.createRide(newRide);
 
-  // Notificar a choferes conectados por WebSocket
+  // Notificar a choferes con búsqueda concéntrica (3km -> 5km -> 10km -> Todo Bariloche)
   const io = req.app.get('io');
   if (io) {
-    io.to('drivers').emit('ride:new_available', {
-      ride: newRide,
-      passenger: {
-        id: req.user.id,
-        fullName: req.user.fullName,
-        phone: req.user.phone
-      }
-    });
+    dispatchRideExpandingRings(io, newRide, passengerUser);
   }
 
   // Notificar también por Push Notifications a choferes online con pases activos

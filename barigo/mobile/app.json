@@ -40,7 +40,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Permite que BariGo rastree tu viaje en Bariloche de forma continua."
+          "locationAlwaysAndWhenInUsePermission": "Permite que BariGo rastree tu viaje en Bariloche de forma continua.",
+          "locationWhenInUsePermission": "BariGo necesita tu ubicación para calcular tarifas y enviar choferes en Bariloche."
         }
       ],
       [
@@ -49,7 +50,8 @@
           "icon": "./assets/icon.png",
           "color": "#06b6d4"
         }
-      ]
+      ],
+      "expo-status-bar"
     ]
   }
 }

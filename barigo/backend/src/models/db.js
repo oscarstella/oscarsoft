@@ -46,53 +46,45 @@ function save() {
 if (state.users.length === 0) {
   console.log('[BariGo DB] Inicializando datos demo para Bariloche...');
   const salt = bcrypt.genSaltSync(10);
-  const passwordHash = bcrypt.hashSync('barigo123', salt);
+  const passwordHash = bcrypt.hashSync('123456', salt);
 
   // 1. Admin
   const admin = {
     id: 'usr-admin-1',
-    email: 'admin@barigo.app',
+    email: 'oscarnicolasstella@gmail.com',
+    username: 'admin',
     password: passwordHash,
-    fullName: 'Administrador BariGo',
+    fullName: 'Oscar Nicolás Stella (Admin)',
     phone: '+5492944001122',
     role: 'admin',
     createdAt: new Date().toISOString()
   };
 
-  // 2. Pasajero Demo
+  // 2. Pasajero
   const passenger = {
     id: 'usr-pasajero-1',
-    email: 'pasajero@barigo.app',
+    email: 'pasajero1@barigo.app',
+    username: 'pasajero1',
     password: passwordHash,
-    fullName: 'Martina Bariloche',
+    fullName: 'Martina Pasajera 1',
     phone: '+5492944112233',
     role: 'passenger',
     createdAt: new Date().toISOString()
   };
 
-  // 3. Chofer 1 (Centro / Mitre)
+  // 3. Chofer 1
   const driver1 = {
     id: 'usr-chofer-1',
     email: 'chofer1@barigo.app',
+    username: 'chofer1',
     password: passwordHash,
-    fullName: 'Carlos Nahuel Huapi',
+    fullName: 'Carlos Nahuel Huapi (Chofer 1)',
     phone: '+5492944223344',
     role: 'driver',
     createdAt: new Date().toISOString()
   };
 
-  // 4. Chofer 2 (Bustillo Km 4)
-  const driver2 = {
-    id: 'usr-chofer-2',
-    email: 'chofer2@barigo.app',
-    password: passwordHash,
-    fullName: 'Esteban Melipal',
-    phone: '+5492944334455',
-    role: 'driver',
-    createdAt: new Date().toISOString()
-  };
-
-  state.users.push(admin, passenger, driver1, driver2);
+  state.users.push(admin, passenger, driver1);
 
   // Driver profiles (adaptado a normativa de Bariloche con cadenas de nieve)
   state.driverProfiles[driver1.id] = {
@@ -111,22 +103,6 @@ if (state.users.length === 0) {
     totalTrips: 184
   };
 
-  state.driverProfiles[driver2.id] = {
-    id: driver2.id,
-    vehicleMake: 'Toyota',
-    vehicleModel: 'Etios Sedan',
-    vehicleYear: 2022,
-    vehiclePlate: 'AG 881 KP',
-    vehicleColor: 'Gris Plata',
-    doorsCount: 4,
-    hasAirConditioning: true,
-    hasSnowChains: true,
-    hasFireExtinguisher: true,
-    verificationStatus: 'approved',
-    ratingAvg: 4.88,
-    totalTrips: 92
-  };
-
   // Pases de 24hs activos para choferes
   const now = new Date();
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -134,15 +110,6 @@ if (state.users.length === 0) {
     {
       id: 'pass-1',
       driverId: driver1.id,
-      amountPaid: 4500,
-      startedAt: now.toISOString(),
-      expiresAt: tomorrow.toISOString(),
-      paymentStatus: 'approved',
-      paymentMethod: 'mercadopago'
-    },
-    {
-      id: 'pass-2',
-      driverId: driver2.id,
       amountPaid: 4500,
       startedAt: now.toISOString(),
       expiresAt: tomorrow.toISOString(),
@@ -163,24 +130,23 @@ if (state.users.length === 0) {
     lastUpdated: now.toISOString()
   };
 
-  state.driverLocations[driver2.id] = {
-    driverId: driver2.id,
-    lat: -41.1290,
-    lng: -71.3580, // Av. Bustillo Km 4
-    heading: 270,
-    speed: 40,
-    isOnline: true,
-    isBusy: false,
-    lastUpdated: now.toISOString()
-  };
-
   save();
 }
 
 // Database helper functions
 const db = {
   // Users
-  findUserByEmail: (email) => state.users.find(u => u.email.toLowerCase() === email.toLowerCase()),
+  findUserByEmail: (identifier) => {
+    if (!identifier) return null;
+    const clean = identifier.toLowerCase().trim();
+    return state.users.find(u => 
+      u.email.toLowerCase() === clean || 
+      (u.username && u.username.toLowerCase() === clean) ||
+      (clean === 'chofer1' && u.email === 'chofer1@barigo.app') ||
+      (clean === 'pasajero1' && u.email === 'pasajero1@barigo.app') ||
+      (clean === 'admin' && u.email === 'oscarnicolasstella@gmail.com')
+    );
+  },
   findUserById: (id) => state.users.find(u => u.id === id),
   createUser: (userData) => {
     state.users.push(userData);

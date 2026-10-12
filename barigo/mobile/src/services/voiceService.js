@@ -1,46 +1,69 @@
 import * as Speech from 'expo-speech';
 
+function cleanText(txt) {
+  if (!txt) return '';
+  return txt
+    .replace(/,?\s*(?:San Carlos de )?Bariloche/gi, '')
+    .replace(/,?\s*Río Negro/gi, '')
+    .replace(/,?\s*Argentina/gi, '')
+    .trim();
+}
+
 /**
  * Servicio de voz y locución con acento argentino (es-AR)
  * para alertas a choferes y pasajeros en BariGo.
  */
 export const VoiceService = {
-  // Reproducir mensaje con entonación argentina
+  // Reproducir mensaje con entonación argentina natural y pausada
   speak(text) {
     if (!text) return;
-    Speech.stop();
-    Speech.speak(text, {
-      language: 'es-AR',
-      pitch: 1.0,
-      rate: 0.98,
-      onStart: () => console.log(`[Voz Argentina]: "${text}"`),
-      onError: (e) => console.log('[Voz Error]:', e)
-    });
+    try {
+      Speech.stop();
+      Speech.speak(text, {
+        language: 'es-AR',
+        pitch: 0.96,
+        rate: 0.86,
+        onStart: () => console.log(`[Voz Argentina]: "${text}"`),
+        onError: (e) => console.log('[Voz Error]:', e)
+      });
+    } catch (e) {
+      console.warn('[Voz Speech Error]:', e);
+    }
   },
 
   // Alertas específicas para Chofer
   notifyNewRideDriver(origin, fare) {
-    this.speak(`¡Nuevo viaje en Bariloche! Pasajero en ${origin}. Tarifa ${fare} pesos.`);
+    const cleanOrigin = cleanText(origin);
+    this.speak(`Tenés un nuevo viaje. Recoger en ${cleanOrigin}. Tarifa: ${fare} pesos.`);
+  },
+
+  notifyRideCancelled() {
+    this.speak('El pasajero canceló la solicitud.');
   },
 
   notifyDriverArrived() {
-    this.speak('Has llegado al punto de recogida del pasajero.');
+    this.speak('Llegaste al punto de encuentro. Se notificó al pasajero.');
   },
 
   notifyTripStarted(destination) {
-    this.speak(`Viaje iniciado con destino a ${destination}. Que tengas un buen recorrido.`);
+    const cleanDest = cleanText(destination);
+    this.speak(`Viaje iniciado hacia ${cleanDest}. Conducí con precaución.`);
   },
 
   notifyTripCompleted(fare) {
-    this.speak(`Has llegado al destino final. Cobrar al pasajero ${fare} pesos.`);
+    this.speak(`Viaje finalizado. Cobrar ${fare} pesos al pasajero.`);
   },
 
   // Alertas específicas para Pasajero
   notifyDriverAssigned(driverName, vehicle, plate) {
-    this.speak(`Tu chofer ${driverName} viene en camino en un ${vehicle}, patente ${plate}.`);
+    this.speak(`Viaje aceptado. Tu chofer ${driverName} viene en camino en un ${vehicle}.`);
+  },
+
+  notifyDriverOneMinuteAway() {
+    this.speak('¡Atención! Tu auto está a 1 minuto de llegar. Salí a su encuentro.');
   },
 
   notifyDriverAtDoor() {
-    this.speak('Tu chofer de BariGo ha llegado a la puerta.');
+    this.speak('Tu chofer de BariGo ya está en el punto de encuentro.');
   }
 };

@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-// URL del servidor (configurable a oscarsoft.com.ar en producción o IP local en desarrollo)
+// URL del servidor WebSocket (VPS en producción)
 export const SOCKET_URL = 'https://oscarsoft.com.ar';
 
 class SocketService {
@@ -8,33 +8,61 @@ class SocketService {
     this.socket = null;
   }
 
-  connect(userId, role) {
+  connect(userId = 'usr-pasajero-1', role = 'passenger') {
     if (this.socket && this.socket.connected) return this.socket;
 
-    this.socket = io(SOCKET_URL, {
-      query: { userId, role },
-      transports: ['websocket'],
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000
-    });
+    try {
+      this.socket = io(SOCKET_URL, {
+        query: { userId, role },
+        transports: ['websocket', 'polling'],
+        autoConnect: true,
+        reconnection: true,
+        reconnectionAttempts: 15,
+        reconnectionDelay: 1500
+      });
 
-    this.socket.on('connect', () => {
-      console.log('[Socket Mobile] Conectado al servidor BariGo:', this.socket.id);
-    });
+      this.socket.on('connect', () => {
+        console.log('[Socket Mobile] Conectado exitosamente a BariGo VPS:', this.socket.id);
+        if (role === 'driver') {
+          this.socket.emit('driver:register', { driverId: userId });
+        }
+      });
 
-    this.socket.on('disconnect', () => {
-      console.log('[Socket Mobile] Desconectado');
-    });
+      this.socket.on('disconnect', () => {
+        console.log('[Socket Mobile] Desconectado del servidor');
+      });
+    } catch (e) {
+      console.warn('[Socket Mobile] Error al conectar:', e);
+    }
 
     return this.socket;
   }
 
+  getSocket() {
+    return this.socket || this.connect();
+  }
+
+  // Pasajero solicita viaje
+  requestRide(rideData) {
+    const s = this.getSocket();
+    if (s) {
+      s.emit('ride:request', rideData);
+    }
+  }
+
+  // Pasajero cancela viaje
+  cancelRide(rideId) {
+    const s = this.getSocket();
+    if (s) {
+      s.emit('ride:cancel', { rideId });
+    }
+  }
+
   // Chofer envía ubicación GPS
   sendDriverLocation(driverId, { lat, lng, heading, speed, activeRideId }) {
-    if (this.socket) {
-      this.socket.emit('driver:update_location', {
+    const s = this.getSocket();
+    if (s) {
+      s.emit('driver:update_location', {
         driverId,
         lat,
         lng,
@@ -46,16 +74,18 @@ class SocketService {
   }
 
   // Chofer acepta viaje
-  acceptRide(rideId, driverId) {
-    if (this.socket) {
-      this.socket.emit('ride:accept', { rideId, driverId });
+  acceptRide(rideId, driverId, driverInfo) {
+    const s = this.getSocket();
+    if (s) {
+      s.emit('ride:accept', { rideId, driverId, driver: driverInfo });
     }
   }
 
   // Chofer actualiza estado ('arriving', 'in_progress', 'completed')
   updateRideStatus(rideId, status) {
-    if (this.socket) {
-      this.socket.emit('ride:update_status', { rideId, status });
+    const s = this.getSocket();
+    if (s) {
+      s.emit('ride:update_status', { rideId, status });
     }
   }
 
