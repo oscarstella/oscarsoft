@@ -33,49 +33,71 @@ export default function BarigoMap({
     if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        center: [center.lat, center.lng],
-        zoom: zoom,
-        zoomControl: false,
-        attributionControl: false,
-        dragging: interactive,
-        touchZoom: interactive,
-        scrollWheelZoom: interactive,
-        doubleClickZoom: interactive
-      });
-
-      // Capa de Mapa OpenStreetMap Dark nativo (sin requerir API key ni marcas de agua)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        className: 'dark-tiles'
-      }).addTo(map);
-
-      markersLayerRef.current = L.layerGroup().addTo(map);
-      routeLayerRef.current = L.layerGroup().addTo(map);
-
-      mapInstanceRef.current = map;
-
-      // Evento de clic en el mapa para seleccionar puntos
-      if (onMapClick) {
-        map.on('click', (e) => {
-          onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng });
-        });
+      if (mapContainerRef.current._leaflet_id) {
+        delete mapContainerRef.current._leaflet_id;
       }
 
-      // Invalidate size para garantizar renderizado perfecto
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 150);
+      const initialCenter = (center && Number.isFinite(Number(center.lat)) && Number.isFinite(Number(center.lng)))
+        ? [Number(center.lat), Number(center.lng)]
+        : [BARILOCHE_CENTER.lat, BARILOCHE_CENTER.lng];
+
+      try {
+        const map = L.map(mapContainerRef.current, {
+          center: initialCenter,
+          zoom: zoom,
+          zoomControl: false,
+          attributionControl: false,
+          dragging: interactive,
+          touchZoom: interactive,
+          scrollWheelZoom: interactive,
+          doubleClickZoom: interactive
+        });
+
+        // Capa de Mapa OpenStreetMap Dark nativo (sin requerir API key ni marcas de agua)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors',
+          className: 'dark-tiles'
+        }).addTo(map);
+
+        markersLayerRef.current = L.layerGroup().addTo(map);
+        routeLayerRef.current = L.layerGroup().addTo(map);
+
+        mapInstanceRef.current = map;
+
+        // Evento de clic en el mapa para seleccionar puntos
+        if (onMapClick) {
+          map.on('click', (e) => {
+            onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng });
+          });
+        }
+
+        // Invalidate size para garantizar renderizado perfecto
+        setTimeout(() => {
+          if (mapInstanceRef.current) {
+            try { mapInstanceRef.current.invalidateSize(); } catch {}
+          }
+        }, 150);
+      } catch (initErr) {
+        console.warn('[BarigoMap] Error inicializando Leaflet:', initErr);
+      }
     }
 
     const handleResize = () => {
-      mapInstanceRef.current?.invalidateSize();
+      try {
+        mapInstanceRef.current?.invalidateSize();
+      } catch {}
     };
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch {}
+        mapInstanceRef.current = null;
+      }
     };
   }, []);
 
@@ -237,8 +259,16 @@ export default function BarigoMap({
           }
         } catch {}
       } else if (isValidCoord(pickup)) {
-        map.panTo([Number(pickup.lat), Number(pickup.lng)], { animate: true });
+        try {
+          map.panTo([Number(pickup.lat), Number(pickup.lng)], { animate: true });
+        } catch {}
       }
+
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          try { mapInstanceRef.current.invalidateSize(); } catch {}
+        }
+      }, 100);
     } catch (layerErr) {
       console.warn('[BarigoMap] Error seguro al renderizar capas del mapa:', layerErr);
     }

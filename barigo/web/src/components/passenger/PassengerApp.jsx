@@ -206,6 +206,8 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
         }
       };
 
+      setOriginCoord({ lat: pLat, lng: pLng });
+      setDestCoord({ lat: dLat, lng: dLng });
       setRideState(acceptedRide);
       if (onRideChange) onRideChange(acceptedRide);
       soundService.playSuccessSound();
@@ -347,6 +349,7 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
 
   // Solicitar viaje al estilo Uber
   const handleRequestRide = async () => {
+    voiceService.unlockAudio();
     soundService.playTapSound();
     const fare = calculateFare(selectedCategory);
     

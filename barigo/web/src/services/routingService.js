@@ -306,7 +306,7 @@ const BARILOCHE_THOROUGHFARES = [
   { name: 'Brown', aliases: ['brown', 'almirante brown'], baseLat: -41.1415, baseLng: -71.3100, stepLat: -0.00002, stepLng: 0.00007 }
 ];
 
-function formatManeuver(s) {
+function formatManeuver(s, destName = '') {
   const m = s.maneuver || {};
   const street = s.name ? s.name.trim() : '';
   const mod = m.modifier || '';
@@ -314,25 +314,25 @@ function formatManeuver(s) {
   let instruction = '';
 
   if (type === 'depart') {
-    instruction = street ? `Inicie por ${street}` : 'Inicie el recorrido';
+    instruction = destName ? `Iniciá el recorrido hacia ${destName}${street ? ` por ${street}` : ''}` : (street ? `Iniciá por ${street}` : 'Iniciá el recorrido');
   } else if (type === 'arrive') {
-    instruction = 'Llegada al punto de destino';
+    instruction = destName ? `Llegaste a ${destName}` : 'Llegaste al punto de destino';
   } else if (type === 'roundabout' || type === 'rotary') {
-    instruction = street ? `En la rotonda tome la salida hacia ${street}` : 'En la rotonda continúe adelante';
+    instruction = street ? `En la rotonda tomá la salida hacia ${street}` : 'En la rotonda continuá derecho';
   } else if (mod === 'left' || mod === 'sharp left') {
-    instruction = street ? `Gire a la izquierda en ${street}` : 'Gire a la izquierda';
+    instruction = street ? `Girá a la izquierda en ${street}` : 'Girá a la izquierda';
   } else if (mod === 'slight left') {
-    instruction = street ? `Manténgase a la izquierda hacia ${street}` : 'Manténgase a la izquierda';
+    instruction = street ? `Mantenete a la izquierda hacia ${street}` : 'Mantenete a la izquierda';
   } else if (mod === 'right' || mod === 'sharp right') {
-    instruction = street ? `Gire a la derecha en ${street}` : 'Gire a la derecha';
+    instruction = street ? `Girá a la derecha en ${street}` : 'Girá a la derecha';
   } else if (mod === 'slight right') {
-    instruction = street ? `Manténgase a la derecha hacia ${street}` : 'Manténgase a la derecha';
+    instruction = street ? `Mantenete a la derecha hacia ${street}` : 'Mantenete a la derecha';
   } else if (mod === 'straight' || type === 'continue') {
-    instruction = street ? `Continúe derecho por ${street}` : 'Continúe derecho';
+    instruction = street ? `Continuá derecho por ${street}` : 'Continuá derecho';
   } else if (mod === 'uturn') {
-    instruction = 'Realice un giro en U';
+    instruction = 'Hacé un giro en U';
   } else {
-    instruction = street ? `Continúe por ${street}` : 'Continúe por la calle actual';
+    instruction = street ? `Continuá por ${street}` : 'Continuá por la vía actual';
   }
 
   return {
@@ -344,7 +344,7 @@ function formatManeuver(s) {
   };
 }
 
-function generateFallbackSteps(distanceKm, destName) {
+function generateFallbackSteps(distanceKm, destName = '') {
   const totalMeters = Math.round(distanceKm * 1000);
   const m1 = Math.max(Math.round(totalMeters * 0.25), 100);
   const m2 = Math.max(Math.round(totalMeters * 0.45), 200);
@@ -352,28 +352,28 @@ function generateFallbackSteps(distanceKm, destName) {
 
   return [
     {
-      instruction: 'Inicie el recorrido por la vía actual',
+      instruction: destName ? `Iniciá el recorrido hacia ${destName}` : 'Iniciá el recorrido por la calle actual',
       street: 'Av. San Martín / Mitre',
       distanceMeters: m1,
       modifier: 'straight',
       type: 'depart'
     },
     {
-      instruction: 'Gire hacia la arteria principal de Bariloche',
+      instruction: 'Girá hacia la arteria principal de Bariloche',
       street: 'Moreno / Av. Pioneros',
       distanceMeters: m2,
       modifier: 'right',
       type: 'turn'
     },
     {
-      instruction: `Continúe aproximándose al destino`,
+      instruction: destName ? `Continuá aproximándote a ${destName}` : 'Continuá aproximándote al destino',
       street: destName || 'Punto acordado',
       distanceMeters: m3,
       modifier: 'straight',
       type: 'continue'
     },
     {
-      instruction: 'Ha llegado al punto de encuentro o destino',
+      instruction: destName ? `Llegaste a ${destName}` : 'Llegaste al punto de encuentro o destino',
       street: destName || 'Destino',
       distanceMeters: 50,
       modifier: 'arrive',
@@ -397,7 +397,7 @@ export async function getStreetRoute(originLat, originLng, destLat, destLng, des
 
       let steps = [];
       if (route.legs && route.legs[0] && Array.isArray(route.legs[0].steps)) {
-        steps = route.legs[0].steps.map(formatManeuver);
+        steps = route.legs[0].steps.map(s => formatManeuver(s, destName));
       }
       if (steps.length === 0) {
         steps = generateFallbackSteps(distanceKm, destName);

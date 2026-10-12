@@ -320,6 +320,9 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     soundService.stopIncomingRideRingtone();
     soundService.playSuccessSound();
 
+    // Desbloquear audio del navegador inmediatamente en el click/tap del chofer
+    voiceService.unlockAudio();
+
     const pLat = Number(incomingOffer.originCoord?.lat || incomingOffer.originLat || -41.1335);
     const pLng = Number(incomingOffer.originCoord?.lng || incomingOffer.originLng || -71.3103);
     const dLat = Number(incomingOffer.destCoord?.lat || incomingOffer.destinationLat || -41.1415);
@@ -344,6 +347,9 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     setNavPhase('to_pickup');
     if (onRideChange) onRideChange(acceptedRide);
     syncService.emit('RIDE_ACCEPTED', acceptedRide);
+
+    // Indicación inmediata hablada con voz natural argentina
+    voiceService.speakAcceptAndStartToPickup(acceptedRide.originText);
 
     // Notificar al socket del backend
     const socket = apiService.getSocket();
