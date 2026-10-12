@@ -450,37 +450,47 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
 
   // Guardar viaje completado en historial
   const handleFinishCompletedRide = () => {
-    soundService.playTapSound();
-    if (rideState) {
-      const completedTrip = {
-        id: rideState.id || ('viaje-' + Date.now().toString().slice(-4)),
-        date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
-        originText: rideState.originText,
-        destText: rideState.destText,
-        originCoord: rideState.originCoord,
-        destCoord: rideState.destCoord,
-        fare: (rideState.fare || calculateFare(selectedCategory)) + tip,
-        status: 'Completado',
-        driverName: rideState.driver?.name || 'Carlos Nahuel Huapi',
-        vehicle: `${rideState.driver?.vehicleModel || 'Chevrolet Onix'} • ${rideState.driver?.vehiclePlate || 'AF 342 BZ'}`,
-        paymentMethod: paymentMethod === 'cash' ? 'Efectivo' : 'Mercado Pago',
-        rating: rating
-      };
+    try {
+      soundService.playSuccessSound();
+      if (rideState) {
+        const completedTrip = {
+          id: rideState.id || ('viaje-' + Date.now().toString().slice(-4)),
+          date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          originText: rideState.originText || originText || 'Origen',
+          destText: rideState.destText || destText || 'Destino',
+          originCoord: rideState.originCoord || originCoord,
+          destCoord: rideState.destCoord || destCoord,
+          fare: Number(rideState.fare || rideState.finalFare || calculateFare(selectedCategory) || 4200) + Number(tip || 0),
+          status: 'Completado',
+          driverName: rideState.driver?.name || 'Carlos Nahuel Huapi',
+          vehicle: `${rideState.driver?.vehicleModel || 'Chevrolet Onix'} • ${rideState.driver?.vehiclePlate || 'AF 342 BZ'}`,
+          paymentMethod: paymentMethod === 'cash' ? 'Efectivo al chofer' : 'Mercado Pago',
+          rating: rating || 5
+        };
 
-      setTripHistory(prev => {
-        const updated = [completedTrip, ...prev];
-        try {
-          localStorage.setItem('barigo_passenger_trip_history', JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
+        setTripHistory(prev => {
+          const updated = [completedTrip, ...(Array.isArray(prev) ? prev : [])];
+          try {
+            localStorage.setItem('barigo_passenger_trip_history', JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+      }
+    } catch (e) {
+      console.warn('[PassengerApp] Error guardando viaje completado:', e);
+    } finally {
+      setCompletedModalOpen(false);
+      setRideState(null);
+      setDestText('');
+      setDestCoord(null);
+      setRoutePolyline([]);
+      setDistanceKm(null);
+      setEstimatedMins(null);
+      setCurrentStep(1);
+      setTip(0);
+      setRating(5);
+      if (onRideChange) onRideChange(null);
     }
-
-    setCompletedModalOpen(false);
-    setRideState(null);
-    setTip(0);
-    setRating(5);
-    if (onRideChange) onRideChange(null);
   };
 
   // Repetir un viaje del historial
@@ -948,7 +958,15 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
 
   const renderCompletedModal = () => (
     <div className="modal-backdrop">
-      <div className="completed-trip-card animate-scale-up">
+      <div className="completed-trip-card animate-scale-up" style={{ position: 'relative' }}>
+        <button 
+          className="modal-close-icon" 
+          onClick={handleFinishCompletedRide}
+          title="Cerrar y nuevo viaje"
+          style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', cursor: 'pointer' }}
+        >
+          <X size={18} />
+        </button>
         <div className="completed-header">
           <div className="check-success-icon">
             <CheckCircle2 size={36} color="#10b981" />

@@ -81,9 +81,8 @@ export default function DriverGpsView({
                 const firstStep = res.steps[0];
                 const nextStep = res.steps[1];
                 const stepToSpeak = nextStep || firstStep;
-                if (stepToSpeak?.instruction) {
-                  voiceService.speakTurnByTurn(stepToSpeak.instruction, firstStep?.distanceMeters);
-                }
+                const turnPart = stepToSpeak?.instruction ? `. En ${firstStep?.distanceMeters || 100} metros, ${stepToSpeak.instruction.toLowerCase()}` : '';
+                voiceService.speak(`Viaje aceptado. Dirigite a ${originName}${turnPart}.`);
               }
             }
           }
@@ -130,9 +129,8 @@ export default function DriverGpsView({
                 const firstStep = res.steps[0];
                 const nextStep = res.steps[1];
                 const stepToSpeak = nextStep || firstStep;
-                if (stepToSpeak?.instruction) {
-                  voiceService.speakTurnByTurn(stepToSpeak.instruction, firstStep?.distanceMeters);
-                }
+                const turnPart = stepToSpeak?.instruction ? `. En ${firstStep?.distanceMeters || 100} metros, ${stepToSpeak.instruction.toLowerCase()}` : '';
+                voiceService.speak(`Iniciando viaje hacia ${destName}${turnPart}. Conducí con precaución.`);
               }
             }
           }

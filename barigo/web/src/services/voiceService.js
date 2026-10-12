@@ -132,8 +132,9 @@ class VoiceService {
         synth.resume();
       }
 
-      // Detenemos locución previa para dar paso a la instrucción actual
-      synth.cancel();
+      if (options.interrupt) {
+        synth.cancel();
+      }
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'es-AR';

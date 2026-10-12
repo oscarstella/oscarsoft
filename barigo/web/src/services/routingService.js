@@ -397,37 +397,43 @@ export async function getStreetRoute(originLat, originLng, destLat, destLng, des
     };
   }
 
-  try {
-    const url = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('OSRM network error');
-    
-    const data = await res.json();
-    if (data.routes && data.routes.length > 0) {
-      const route = data.routes[0];
-      const latLngPoints = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-      const distanceKm = Number((route.distance / 1000).toFixed(1));
-      const durationMin = Math.max(Math.ceil(route.duration / 60), 2);
+  const endpoints = [
+    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true`,
+    `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true`
+  ];
 
-      let steps = [];
-      if (route.legs && route.legs[0] && Array.isArray(route.legs[0].steps)) {
-        steps = route.legs[0].steps.map(s => formatManeuver(s, destName));
-      }
-      if (steps.length === 0) {
-        steps = generateFallbackSteps(distanceKm, destName);
-      }
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) continue;
+      
+      const data = await res.json();
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const latLngPoints = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+        const distanceKm = Number((route.distance / 1000).toFixed(1));
+        const durationMin = Math.max(Math.ceil(route.duration / 60), 2);
 
-      const result = {
-        points: latLngPoints,
-        distanceKm,
-        durationMin,
-        steps
-      };
-      routeCache.set(cacheKey, result);
-      return result;
+        let steps = [];
+        if (route.legs && route.legs[0] && Array.isArray(route.legs[0].steps)) {
+          steps = route.legs[0].steps.map(s => formatManeuver(s, destName));
+        }
+        if (steps.length === 0) {
+          steps = generateFallbackSteps(distanceKm, destName);
+        }
+
+        const result = {
+          points: latLngPoints,
+          distanceKm,
+          durationMin,
+          steps
+        };
+        routeCache.set(cacheKey, result);
+        return result;
+      }
+    } catch (err) {
+      // Intentar con siguiente endpoint
     }
-  } catch (err) {
-    console.warn('[Ruteo OSRM]:', err.message);
   }
 
   const dLat = destLat - originLat;

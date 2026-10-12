@@ -225,19 +225,12 @@ export default function BarigoMap({
           points = routePolyline.filter(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]));
         }
 
-        if (points.length < 2) {
-          points = [
-            [Number(pickup.lat), Number(pickup.lng)],
-            [(Number(pickup.lat) + Number(dropoff.lat)) / 2 + 0.002, (Number(pickup.lng) + Number(dropoff.lng)) / 2 - 0.001],
-            [Number(dropoff.lat), Number(dropoff.lng)]
-          ];
-        }
-
-        // Sombra oscura y halo exterior de la ruta
-        L.polyline(points, {
-          color: '#00293d',
-          weight: 9,
-          opacity: 0.8,
+        if (points.length >= 2) {
+          // Sombra oscura y halo exterior de la ruta
+          L.polyline(points, {
+            color: '#00293d',
+            weight: 9,
+            opacity: 0.8,
           lineCap: 'round',
           lineJoin: 'round'
         }).addTo(routeLayerRef.current);
@@ -251,13 +244,14 @@ export default function BarigoMap({
           lineJoin: 'round'
         }).addTo(routeLayerRef.current);
 
-        // Si tenemos origen y destino, encuadrar el mapa
-        try {
-          const bounds = L.latLngBounds(points);
-          if (bounds.isValid()) {
-            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-          }
-        } catch {}
+          // Si tenemos origen y destino, encuadrar el mapa
+          try {
+            const bounds = L.latLngBounds(points);
+            if (bounds.isValid()) {
+              map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+            }
+          } catch {}
+        }
       } else if (isValidCoord(pickup)) {
         try {
           map.panTo([Number(pickup.lat), Number(pickup.lng)], { animate: true });
