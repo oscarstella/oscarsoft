@@ -1,10 +1,10 @@
-// Guía y síntesis de voz en acento argentino natural con cadencia GPS fluida (Estilo Google Maps / Waze / Uber)
+// Guía y síntesis de voz en acento argentino natural con cadencia GPS fluida (Google Maps / Waze / Uber)
 import { soundService } from './soundService';
 
 // Función para acortar y humanizar direcciones de Bariloche para locución fluida
 export function cleanAddressForSpeech(address) {
   if (!address) return '';
-  return address
+  return String(address)
     .replace(/,?\s*(?:San Carlos de )?Bariloche/gi, '')
     .replace(/,?\s*Río Negro/gi, '')
     .replace(/,?\s*Argentina/gi, '')
@@ -25,11 +25,13 @@ class VoiceService {
   initVoices() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       const load = () => {
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-          this.voicesLoaded = true;
-          this.cachedVoice = this.findBestNaturalVoice(voices);
-        }
+        try {
+          const voices = window.speechSynthesis.getVoices();
+          if (voices.length > 0) {
+            this.voicesLoaded = true;
+            this.cachedVoice = this.findBestNaturalVoice(voices);
+          }
+        } catch {}
       };
 
       load();
@@ -39,19 +41,18 @@ class VoiceService {
     }
   }
 
-  // Desbloqueo inmediato del audio del navegador al interactuar (clicks / taps en celular)
+  // Reanuda el motor si el navegador lo puso en pausa (SIN ENVIAR NUNCA CADENAS VACÍAS)
   unlockAudio() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
-        window.speechSynthesis.resume();
-        const warmUtterance = new SpeechSynthesisUtterance('');
-        warmUtterance.volume = 0.01;
-        window.speechSynthesis.speak(warmUtterance);
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
       } catch {}
     }
   }
 
-  // Selección rigurosa de la voz con mejor pronunciación y naturalidad en español
+  // Selección rigurosa de la mejor voz natural en español
   findBestNaturalVoice(voicesList) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
     const voices = voicesList || window.speechSynthesis.getVoices();
@@ -123,34 +124,53 @@ class VoiceService {
       return;
     }
 
+    const cleanText = String(text).trim();
+    if (!cleanText) return;
+
     try {
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.resume();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'es-AR';
-      // Cadencia 0.92 y pitch 1.0 garantizan el tono cálido de GPS (Google Maps / Waze)
-      utterance.rate = options.rate || 0.92;
-      utterance.pitch = options.pitch || 1.0;
-
-      const voice = this.cachedVoice || this.findBestNaturalVoice();
-      if (voice) {
-        utterance.voice = voice;
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
       }
 
-      // Evita interrupciones de síntesis en navegadores móviles
-      const resumeInterval = setInterval(() => {
-        if (!window.speechSynthesis.speaking) {
-          clearInterval(resumeInterval);
-        } else {
-          window.speechSynthesis.resume();
+      window.speechSynthesis.cancel();
+
+      // En Chrome y Safari se requiere un retraso de 40ms entre cancel y speak para evitar aborto silencioso
+      setTimeout(() => {
+        try {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+
+          const utterance = new SpeechSynthesisUtterance(cleanText);
+          utterance.lang = 'es-AR';
+          utterance.rate = options.rate || 0.95;
+          utterance.pitch = options.pitch || 1.0;
+          utterance.volume = 1.0;
+
+          const voice = this.cachedVoice || this.findBestNaturalVoice();
+          if (voice) {
+            utterance.voice = voice;
+          }
+
+          const intervalId = setInterval(() => {
+            if (!window.speechSynthesis.speaking) {
+              clearInterval(intervalId);
+            } else {
+              window.speechSynthesis.resume();
+            }
+          }, 3000);
+
+          utterance.onend = () => clearInterval(intervalId);
+          utterance.onerror = (e) => {
+            clearInterval(intervalId);
+            console.warn('[VoiceService] Utterance error:', e);
+          };
+
+          window.speechSynthesis.speak(utterance);
+        } catch (e2) {
+          console.warn('[VoiceService] Speak error:', e2);
         }
-      }, 4000);
-
-      utterance.onend = () => clearInterval(resumeInterval);
-      utterance.onerror = () => clearInterval(resumeInterval);
-
-      window.speechSynthesis.speak(utterance);
+      }, 40);
     } catch (e) {
       console.warn('[VoiceService] Error:', e);
     }
@@ -158,30 +178,20 @@ class VoiceService {
 
   // --- LOCUCIONES ESPECÍFICAS DE GPS DE CHOFER ---
 
-  // Al aceptar el viaje: indicación inmediata de inicio hacia el origen
-  speakAcceptAndStartToPickup(origin, street = '', nextManeuver = '') {
+  // Locución inicial al aceptar viaje hacia el pasajero
+  speakAcceptAndStartToPickup(origin, street, nextManeuver = '') {
     const cleanOrigin = cleanAddressForSpeech(origin) || 'el punto de encuentro';
-    let msg = `Viaje aceptado. Dirigite hacia ${cleanOrigin}.`;
-    if (street && street !== 'Vía principal de Bariloche') {
-      msg += ` Iniciá el recorrido por ${street}.`;
-    }
-    if (nextManeuver) {
-      msg += ` ${nextManeuver}`;
-    }
-    this.speak(msg);
+    const streetMsg = street ? `por ${cleanAddressForSpeech(street)}` : '';
+    const maneuverMsg = nextManeuver ? ` ${nextManeuver}` : '';
+    this.speak(`Viaje aceptado. Dirigite a buscar al pasajero en ${cleanOrigin} ${streetMsg}.${maneuverMsg}`);
   }
 
-  // Al llegar al origen y comenzar el viaje al destino final
-  speakStartTripToDestination(destination, street = '', nextManeuver = '') {
-    const cleanDest = cleanAddressForSpeech(destination) || 'el destino';
-    let msg = `Viaje iniciado. Dirigite hacia ${cleanDest}.`;
-    if (street && street !== 'Vía principal de Bariloche') {
-      msg += ` Avanzá por ${street}.`;
-    }
-    if (nextManeuver) {
-      msg += ` ${nextManeuver}`;
-    }
-    this.speak(msg);
+  // Locución al iniciar viaje hacia destino con pasajero a bordo
+  speakStartTripToDestination(dest, street, nextManeuver = '') {
+    const cleanDest = cleanAddressForSpeech(dest) || 'el destino';
+    const streetMsg = street ? `por ${cleanAddressForSpeech(street)}` : '';
+    const maneuverMsg = nextManeuver ? ` ${nextManeuver}` : '';
+    this.speak(`Iniciando viaje hacia ${cleanDest} ${streetMsg}.${maneuverMsg} Conducí con precaución.`);
   }
 
   // Locución paso a paso de giro o maniobra

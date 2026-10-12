@@ -205,7 +205,7 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
             lat: Number(incomingRide.destinationLat || incomingRide.destCoord?.lat || -41.1415),
             lng: Number(incomingRide.destinationLng || incomingRide.destCoord?.lng || -71.3132)
           },
-          fare: incomingRide.estimatedFare || incomingRide.fare || 3500,
+          fare: incomingRide.fare || incomingRide.estimatedFare || 3500,
           distanceKm: incomingRide.estimatedDistanceKm || incomingRide.distanceKm || 3.0,
           durationMins: incomingRide.estimatedDurationMins || incomingRide.durationMins || 8,
           paymentMethod: incomingRide.paymentMethod || 'cash',
@@ -348,9 +348,6 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     if (onRideChange) onRideChange(acceptedRide);
     syncService.emit('RIDE_ACCEPTED', acceptedRide);
 
-    // Indicación inmediata hablada con voz natural argentina
-    voiceService.speakAcceptAndStartToPickup(acceptedRide.originText);
-
     // Notificar al socket del backend
     const socket = apiService.getSocket();
     if (socket) {
@@ -370,8 +367,6 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
         }
       });
     }
-
-    voiceService.speak(`Viaje aceptado. Dirigite al punto de encuentro en ${cleanText(acceptedRide.originText)}.`);
   };
 
   // Rechazar viaje

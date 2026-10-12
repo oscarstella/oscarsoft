@@ -382,7 +382,21 @@ function generateFallbackSteps(distanceKm, destName = '') {
   ];
 }
 
+const routeCache = new Map();
+
 export async function getStreetRoute(originLat, originLng, destLat, destLng, destName = '') {
+  if (!originLat || !originLng || !destLat || !destLng) return null;
+
+  // Clave determinista con redondeo a 3 decimales (~100m) para evitar oscilaciones de GPS y ruteo
+  const cacheKey = `${Number(originLat).toFixed(3)},${Number(originLng).toFixed(3)}->${Number(destLat).toFixed(3)},${Number(destLng).toFixed(3)}`;
+  if (routeCache.has(cacheKey)) {
+    const cached = routeCache.get(cacheKey);
+    return {
+      ...cached,
+      steps: destName ? cached.steps.map(s => ({ ...s, instruction: s.instruction.replace(/destino/gi, destName) })) : cached.steps
+    };
+  }
+
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=full&geometries=geojson&steps=true`;
     const res = await fetch(url);
@@ -403,12 +417,14 @@ export async function getStreetRoute(originLat, originLng, destLat, destLng, des
         steps = generateFallbackSteps(distanceKm, destName);
       }
 
-      return {
+      const result = {
         points: latLngPoints,
         distanceKm,
         durationMin,
         steps
       };
+      routeCache.set(cacheKey, result);
+      return result;
     }
   } catch (err) {
     console.warn('[Ruteo OSRM]:', err.message);
@@ -425,7 +441,7 @@ export async function getStreetRoute(originLat, originLng, destLat, destLng, des
   const fallbackDist = Math.max(roadDist, 1.2);
   const fallbackMins = Math.max(Math.ceil((fallbackDist / 30) * 60) + 2, 3);
 
-  return {
+  const fallbackResult = {
     points: [
       [originLat, originLng],
       [originLat, cornerLng],
@@ -437,6 +453,8 @@ export async function getStreetRoute(originLat, originLng, destLat, destLng, des
     durationMin: fallbackMins,
     steps: generateFallbackSteps(fallbackDist, destName)
   };
+  routeCache.set(cacheKey, fallbackResult);
+  return fallbackResult;
 }
 
 export async function searchBarilocheAddress(query) {

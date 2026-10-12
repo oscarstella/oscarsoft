@@ -42,15 +42,15 @@ import { getBarilocheWeather } from '../../services/weatherService';
 export default function PassengerApp({ externalRide, onRideChange, viewMode = 'phone' }) {
   // Pasos: 1 = Origen, 2 = Destino, 3 = Categoría Auto, 4 = Pago y Confirmar
   const [currentStep, setCurrentStep] = useState(1);
-  const [originText, setOriginText] = useState('Centro Cívico de Bariloche');
+  const [originText, setOriginText] = useState('');
   const [originCoord, setOriginCoord] = useState(BARILOCHE_CENTER);
-  const [destText, setDestText] = useState('Av. Bustillo Km 4 (Melipal)');
-  const [destCoord, setDestCoord] = useState(BARILOCHE_PRESETS[4].location);
+  const [destText, setDestText] = useState('');
+  const [destCoord, setDestCoord] = useState(null);
   
   // Ruteo calle por calle (OSRM)
   const [routePolyline, setRoutePolyline] = useState([]);
-  const [distanceKm, setDistanceKm] = useState(4.3);
-  const [estimatedMins, setEstimatedMins] = useState(11);
+  const [distanceKm, setDistanceKm] = useState(0);
+  const [estimatedMins, setEstimatedMins] = useState(0);
 
   // GPS
   const [isLocatingGps, setIsLocatingGps] = useState(false);
@@ -155,17 +155,14 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
       setGpsAccuracy(pos.accuracy ? Math.round(pos.accuracy) : null);
       setIsRealGpsActive(pos.isRealGps);
 
-      const addressName = await gpsService.reverseGeocode(pos.lat, pos.lng);
-      setOriginText(addressName || 'Mi Ubicación Actual');
-
+      // Solo si el usuario tocó explícitamente el botón de GPS completamos el texto del input
       if (!initial) {
+        const addressName = await gpsService.reverseGeocode(pos.lat, pos.lng);
+        setOriginText(addressName || 'Mi Ubicación Actual');
         soundService.playSuccessSound();
       }
     } catch (e) {
       console.warn('Error GPS:', e);
-      if (initial) {
-        setOriginText('Centro Cívico Bariloche');
-      }
     } finally {
       setIsLocatingGps(false);
     }
@@ -292,9 +289,13 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
 
   // Cálculo de tarifa basado en distancia real de calle
   const calculateFare = (category) => {
+    const cat = category || selectedCategory || VEHICLE_CATEGORIES[0];
+    if (!distanceKm || distanceKm <= 0) {
+      return DEFAULT_FARE_SETTINGS.minRideFare;
+    }
     const raw = (DEFAULT_FARE_SETTINGS.baseFare + 
                 (distanceKm * DEFAULT_FARE_SETTINGS.perKmRate) + 
-                (estimatedMins * DEFAULT_FARE_SETTINGS.perMinuteRate)) * category.multiplier;
+                (estimatedMins * DEFAULT_FARE_SETTINGS.perMinuteRate)) * (cat.multiplier || 1.0);
     const total = Math.max(raw, DEFAULT_FARE_SETTINGS.minRideFare);
     return Math.round(total / 50) * 50;
   };
@@ -349,9 +350,16 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
 
   // Solicitar viaje al estilo Uber
   const handleRequestRide = async () => {
+    if (!originText.trim() || !destText.trim()) {
+      soundService.playTapSound();
+      alert('Por favor ingresá un origen y un destino antes de solicitar el viaje.');
+      return;
+    }
     voiceService.unlockAudio();
     soundService.playTapSound();
     const fare = calculateFare(selectedCategory);
+    const resolvedOrigin = originCoord || BARILOCHE_CENTER;
+    const resolvedDest = destCoord || BARILOCHE_PRESETS[4].location;
     
     const newRide = {
       id: 'ride-' + Date.now().toString().slice(-4),
@@ -359,9 +367,9 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
       passengerPhone: '+54 9 294 400-1122',
       passengerRating: 4.98,
       originText,
-      originCoord,
+      originCoord: resolvedOrigin,
       destText,
-      destCoord,
+      destCoord: resolvedDest,
       distanceKm,
       estimatedMins,
       fare,
@@ -458,6 +466,8 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
 
     setCompletedModalOpen(false);
     setRideState(null);
+    setTip(0);
+    setRating(5);
     if (onRideChange) onRideChange(null);
   };
 

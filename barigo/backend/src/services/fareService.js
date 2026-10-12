@@ -26,8 +26,18 @@ function estimateDurationMinutes(distanceKm) {
 function calculateFare(distanceKm, durationMinutes) {
   const settings = db.getSettings();
   
-  // Recargo nocturno (entre 22:00 y 06:00 hs)
-  const currentHour = new Date().getHours();
+  // Recargo nocturno (entre 22:00 y 06:00 hs en horario oficial de Bariloche / Argentina UTC-3)
+  let currentHour = 12;
+  try {
+    const argHourStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      hour: 'numeric',
+      hour12: false
+    }).format(new Date());
+    currentHour = parseInt(argHourStr, 10);
+  } catch {
+    currentHour = (new Date().getUTCHours() - 3 + 24) % 24;
+  }
   const isNight = currentHour >= 22 || currentHour < 6;
   const multiplier = isNight ? (settings.nightMultiplier || 1.2) : 1.0;
 
