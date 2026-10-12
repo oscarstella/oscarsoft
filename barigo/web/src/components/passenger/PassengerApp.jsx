@@ -391,11 +391,11 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
       socket.emit('ride:request', {
         ...newRide,
         originAddress: originText,
-        originLat: originCoord.lat,
-        originLng: originCoord.lng,
+        originLat: resolvedOrigin.lat,
+        originLng: resolvedOrigin.lng,
         destinationAddress: destText,
-        destinationLat: destCoord.lat,
-        destinationLng: destCoord.lng,
+        destinationLat: resolvedDest.lat,
+        destinationLng: resolvedDest.lng,
         fare,
         estimatedFare: fare
       });

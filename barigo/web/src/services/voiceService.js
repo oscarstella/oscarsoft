@@ -19,7 +19,10 @@ class VoiceService {
     this.enabled = true;
     this.voicesLoaded = false;
     this.cachedVoice = null;
+    this.unlocked = false;
+    this.gestureInstalled = false;
     this.initVoices();
+    this.installGestureUnlock();
   }
 
   initVoices() {
@@ -41,15 +44,35 @@ class VoiceService {
     }
   }
 
-  // Reanuda el motor si el navegador lo puso en pausa (SIN ENVIAR NUNCA CADENAS VACÍAS)
+  // Desbloqueo del motor de voz: debe ejecutarse DENTRO de un toque/click del usuario.
+  // Los navegadores móviles solo habilitan la voz si el primer speak() ocurre en un gesto.
   unlockAudio() {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        if (window.speechSynthesis.paused) {
-          window.speechSynthesis.resume();
-        }
-      } catch {}
-    }
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      if (window.speechSynthesis.paused) window.speechSynthesis.resume();
+      if (this.unlocked) return;
+      this.unlocked = true;
+      const warm = new SpeechSynthesisUtterance('.');
+      warm.volume = 0.01;
+      warm.rate = 2;
+      warm.lang = 'es-AR';
+      window.speechSynthesis.speak(warm);
+    } catch {}
+  }
+
+  // Registra el desbloqueo automático en el primer toque de cualquier parte de la app
+  installGestureUnlock() {
+    if (typeof window === 'undefined' || this.gestureInstalled) return;
+    this.gestureInstalled = true;
+    const handler = () => {
+      this.unlockAudio();
+      ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(ev =>
+        window.removeEventListener(ev, handler, true)
+      );
+    };
+    ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(ev =>
+      window.addEventListener(ev, handler, true)
+    );
   }
 
   // Selección rigurosa de la mejor voz natural en español
@@ -128,49 +151,34 @@ class VoiceService {
     if (!cleanText) return;
 
     try {
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+      const synth = window.speechSynthesis;
+      if (synth.paused) synth.resume();
+
+      // Solo se interrumpe lo anterior si se pide explícitamente (ej: nueva maniobra de giro).
+      // Por defecto se encola, así ningún aviso pisa al otro.
+      if (options.interrupt && (synth.speaking || synth.pending)) {
+        synth.cancel();
       }
 
-      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'es-AR';
+      utterance.rate = options.rate || 0.95;
+      utterance.pitch = options.pitch || 1.0;
+      utterance.volume = 1.0;
 
-      // En Chrome y Safari se requiere un retraso de 40ms entre cancel y speak para evitar aborto silencioso
-      setTimeout(() => {
-        try {
-          if (window.speechSynthesis.paused) {
-            window.speechSynthesis.resume();
-          }
+      const voice = this.cachedVoice || this.findBestNaturalVoice();
+      if (voice) utterance.voice = voice;
 
-          const utterance = new SpeechSynthesisUtterance(cleanText);
-          utterance.lang = 'es-AR';
-          utterance.rate = options.rate || 0.95;
-          utterance.pitch = options.pitch || 1.0;
-          utterance.volume = 1.0;
+      // Chrome corta locuciones largas a los ~15s: se mantiene vivo con resume()
+      const intervalId = setInterval(() => {
+        if (!synth.speaking) clearInterval(intervalId);
+        else synth.resume();
+      }, 5000);
+      utterance.onend = () => clearInterval(intervalId);
+      utterance.onerror = () => clearInterval(intervalId);
 
-          const voice = this.cachedVoice || this.findBestNaturalVoice();
-          if (voice) {
-            utterance.voice = voice;
-          }
-
-          const intervalId = setInterval(() => {
-            if (!window.speechSynthesis.speaking) {
-              clearInterval(intervalId);
-            } else {
-              window.speechSynthesis.resume();
-            }
-          }, 3000);
-
-          utterance.onend = () => clearInterval(intervalId);
-          utterance.onerror = (e) => {
-            clearInterval(intervalId);
-            console.warn('[VoiceService] Utterance error:', e);
-          };
-
-          window.speechSynthesis.speak(utterance);
-        } catch (e2) {
-          console.warn('[VoiceService] Speak error:', e2);
-        }
-      }, 40);
+      // Llamada SINCRÓNICA: necesaria para conservar el gesto del usuario en móviles
+      synth.speak(utterance);
     } catch (e) {
       console.warn('[VoiceService] Error:', e);
     }
@@ -183,7 +191,7 @@ class VoiceService {
     const cleanOrigin = cleanAddressForSpeech(origin) || 'el punto de encuentro';
     const streetMsg = street ? `por ${cleanAddressForSpeech(street)}` : '';
     const maneuverMsg = nextManeuver ? ` ${nextManeuver}` : '';
-    this.speak(`Viaje aceptado. Dirigite a buscar al pasajero en ${cleanOrigin} ${streetMsg}.${maneuverMsg}`);
+    this.speak(`Dirigite a buscar al pasajero en ${cleanOrigin} ${streetMsg}.${maneuverMsg}`);
   }
 
   // Locución al iniciar viaje hacia destino con pasajero a bordo
@@ -202,7 +210,7 @@ class VoiceService {
     if (distanceMeters && distanceMeters > 30) {
       text = `En ${distanceMeters} metros, ${instruction.toLowerCase()}`;
     }
-    this.speak(text);
+    this.speak(text, { interrupt: true });
   }
 
   speakPassengerCancelled() {

@@ -53,6 +53,8 @@ export default function DriverGpsView({
   const [showStepsList, setShowStepsList] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
   const [oneMinAlertSent, setOneMinAlertSent] = useState(false);
+  // Evita repetir la locución en cada actualización de GPS (una sola vez por viaje + fase)
+  const announcedRef = useRef('');
 
   // Simulación realista de velocidad GPS si el vehículo está en movimiento
   const simulatedSpeed = navPhase === 'at_pickup' ? 0 : (driverLoc.speed || 38);
@@ -75,12 +77,16 @@ export default function DriverGpsView({
           setNavEta({ mins: res.durationMin, km: res.distanceKm });
           if (res.steps && res.steps.length > 0) {
             setNavSteps(res.steps);
-            setCurrentStepIndex(0);
-            if (!voiceMuted) {
-              const firstStep = res.steps[0];
-              const nextStep = res.steps[1];
-              const nextPrompt = nextStep ? `En ${firstStep.distanceMeters || 150} metros, ${nextStep.instruction.toLowerCase()}.` : '';
-              voiceService.speakAcceptAndStartToPickup(originName, firstStep.street, nextPrompt);
+            const phaseKey = `${activeRide.id}:to_pickup`;
+            if (announcedRef.current !== phaseKey) {
+              announcedRef.current = phaseKey;
+              setCurrentStepIndex(0);
+              if (!voiceMuted) {
+                const firstStep = res.steps[0];
+                const nextStep = res.steps[1];
+                const nextPrompt = nextStep ? `En ${firstStep.distanceMeters || 150} metros, ${nextStep.instruction.toLowerCase()}.` : '';
+                voiceService.speakAcceptAndStartToPickup(originName, firstStep.street, nextPrompt);
+              }
             }
           }
         });
@@ -118,12 +124,16 @@ export default function DriverGpsView({
           setNavEta({ mins: res.durationMin, km: res.distanceKm });
           if (res.steps && res.steps.length > 0) {
             setNavSteps(res.steps);
-            setCurrentStepIndex(0);
-            if (!voiceMuted) {
-              const firstStep = res.steps[0];
-              const nextStep = res.steps[1];
-              const nextPrompt = nextStep ? `En ${firstStep.distanceMeters || 150} metros, ${nextStep.instruction.toLowerCase()}.` : '';
-              voiceService.speakStartTripToDestination(destName, firstStep.street, nextPrompt);
+            const phaseKey = `${activeRide.id}:to_dest`;
+            if (announcedRef.current !== phaseKey) {
+              announcedRef.current = phaseKey;
+              setCurrentStepIndex(0);
+              if (!voiceMuted) {
+                const firstStep = res.steps[0];
+                const nextStep = res.steps[1];
+                const nextPrompt = nextStep ? `En ${firstStep.distanceMeters || 150} metros, ${nextStep.instruction.toLowerCase()}.` : '';
+                voiceService.speakStartTripToDestination(destName, firstStep.street, nextPrompt);
+              }
             }
           }
         });
