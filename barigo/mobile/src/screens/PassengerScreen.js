@@ -218,28 +218,7 @@ export default function PassengerScreen() {
 
   // Historial de Viajes
   const [showHistory, setShowHistory] = useState(false);
-  const [tripHistory, setTripHistory] = useState([
-    {
-      id: 'h-1',
-      date: 'Hoy, 13:40',
-      origin: 'Centro Cívico (Mitre 50)',
-      destination: 'Hospital Zonal (Moreno 601)',
-      fare: 3500,
-      driver: 'Carlos • Chevrolet Onix Joy',
-      category: 'Clásico',
-      paymentMethod: 'Efectivo'
-    },
-    {
-      id: 'h-2',
-      date: 'Ayer, 19:15',
-      origin: 'Mitre 202 (Rapanui)',
-      destination: 'Pasaje Gutiérrez 980',
-      fare: 4200,
-      driver: 'Martín • Renault Sandero',
-      category: 'Clásico',
-      paymentMethod: 'Mercado Pago'
-    }
-  ]);
+  const [tripHistory, setTripHistory] = useState([]);
 
   // 1. OBTENER GEOLOCALIZACIÓN GPS REAL AL ABRIR LA APP
   useEffect(() => {

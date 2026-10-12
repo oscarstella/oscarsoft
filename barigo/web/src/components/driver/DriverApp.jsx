@@ -52,24 +52,24 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     isRealGps: false
   });
 
-  const driverProfile = {
-    id: 'drv-carlos',
+  const [driverProfile, setDriverProfile] = useState({
+    id: 'usr-chofer-1',
     name: 'Carlos Nahuel Huapi',
     rating: 4.96,
-    tripsCount: 1420,
+    tripsCount: 0,
     vehicleModel: 'Chevrolet Onix Joy',
-    vehicleColor: 'Blanco Glaciar',
+    vehicleColor: 'Blanco',
     vehiclePlate: 'AF 342 BZ',
     phone: '+54 9 294 422-3344',
-    lat: driverLoc.lat,
-    lng: driverLoc.lng
-  };
+    lat: -41.1348,
+    lng: -71.3055
+  });
 
   const [isOnline, setIsOnline] = useState(true);
   const [hasPass24h, setHasPass24h] = useState(true);
-  const [passHoursLeft, setPassHoursLeft] = useState(21);
-  const [todayEarnings, setTodayEarnings] = useState(48500);
-  const [todayTripsCount, setTodayTripsCount] = useState(8);
+  const [passHoursLeft, setPassHoursLeft] = useState(24);
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [todayTripsCount, setTodayTripsCount] = useState(0);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   // Estado del Viaje
@@ -279,16 +279,64 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     };
   }, [incomingOffer]);
 
+  // Cargar y sincronizar perfil del chofer en tiempo real con Admin
+  useEffect(() => {
+    apiService.getDriverProfile('usr-chofer-1').then(prof => {
+      if (prof) {
+        setDriverProfile(prev => ({
+          ...prev,
+          id: prof.id || prev.id,
+          name: prof.fullName || prof.name || prev.name,
+          phone: prof.phone || prev.phone,
+          vehicleModel: prof.vehicleModel || prev.vehicleModel,
+          vehicleColor: prof.vehicleColor || prev.vehicleColor,
+          vehiclePlate: prof.vehiclePlate || prev.vehiclePlate,
+          rating: prof.rating || prev.rating
+        }));
+      }
+    });
+
+    const unsubscribe = syncService.subscribe((msg) => {
+      if (msg.type === 'DRIVER_PROFILE_UPDATED') {
+        const prof = msg.payload;
+        setDriverProfile(prev => ({
+          ...prev,
+          name: prof.fullName || prof.name || prev.name,
+          phone: prof.phone || prev.phone,
+          vehicleModel: prof.vehicleModel || `${prof.vehicleMake || ''} ${prof.vehicleName || ''}`.trim() || prev.vehicleModel,
+          vehicleColor: prof.vehicleColor || prev.vehicleColor,
+          vehiclePlate: prof.vehiclePlate || prev.vehiclePlate,
+          rating: prof.rating || prev.rating
+        }));
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // Aceptar viaje
   const handleAcceptRide = () => {
     if (!incomingOffer) return;
     soundService.stopIncomingRideRingtone();
     soundService.playSuccessSound();
 
+    const pLat = Number(incomingOffer.originCoord?.lat || incomingOffer.originLat || -41.1335);
+    const pLng = Number(incomingOffer.originCoord?.lng || incomingOffer.originLng || -71.3103);
+    const dLat = Number(incomingOffer.destCoord?.lat || incomingOffer.destinationLat || -41.1415);
+    const dLng = Number(incomingOffer.destCoord?.lng || incomingOffer.destinationLng || -71.3132);
+
     const acceptedRide = {
       ...incomingOffer,
+      originCoord: { lat: pLat, lng: pLng },
+      destCoord: { lat: dLat, lng: dLng },
+      originText: incomingOffer.originText || 'Punto de partida',
+      destText: incomingOffer.destText || 'Destino',
       status: 'accepted',
-      driver: driverProfile
+      driver: {
+        ...driverProfile,
+        lat: driverLoc.lat,
+        lng: driverLoc.lng
+      }
     };
 
     setActiveRide(acceptedRide);
@@ -310,7 +358,9 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
           vehicle: `${driverProfile.vehicleModel} (${driverProfile.vehicleColor})`,
           plate: driverProfile.vehiclePlate,
           phone: driverProfile.phone,
-          rating: driverProfile.rating
+          rating: driverProfile.rating,
+          lat: driverLoc.lat,
+          lng: driverLoc.lng
         }
       });
     }

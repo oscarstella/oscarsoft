@@ -5,6 +5,18 @@ const db = require('../models/db');
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const isAdminRoute = (req.baseUrl && req.baseUrl.includes('admin')) || (req.path && req.path.includes('admin'));
+    if (isAdminRoute) {
+      req.user = {
+        id: 'usr-admin-1',
+        fullName: 'Oscar Nicolás Stella (Admin)',
+        email: 'oscarnicolasstella@gmail.com',
+        role: 'admin',
+        phone: '+5492944001122'
+      };
+      return next();
+    }
+
     req.user = {
       id: 'usr-pasajero-1',
       fullName: 'Oscar Stella',

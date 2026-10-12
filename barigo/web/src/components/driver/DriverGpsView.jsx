@@ -75,6 +75,9 @@ export default function DriverGpsView({
           setNavEta({ mins: res.durationMin, km: res.distanceKm });
           if (res.steps && res.steps.length > 0) {
             setNavSteps(res.steps);
+            if (!voiceMuted) {
+              voiceService.speak(res.steps[0].instruction);
+            }
           }
         });
       }
@@ -110,6 +113,9 @@ export default function DriverGpsView({
           setNavEta({ mins: res.durationMin, km: res.distanceKm });
           if (res.steps && res.steps.length > 0) {
             setNavSteps(res.steps);
+            if (!voiceMuted) {
+              voiceService.speak(`Ruta al destino iniciada. ${res.steps[0].instruction}`);
+            }
           }
         });
       }
@@ -118,7 +124,17 @@ export default function DriverGpsView({
     return () => {
       isMounted = false;
     };
-  }, [activeRide, navPhase, driverLoc.lat, driverLoc.lng]);
+  }, [activeRide, navPhase, driverLoc.lat, driverLoc.lng, voiceMuted]);
+
+  // 1b. Anunciar cambio de maniobra paso a paso
+  useEffect(() => {
+    if (navSteps.length > 0 && currentStepIndex > 0 && !voiceMuted) {
+      const step = navSteps[currentStepIndex];
+      if (step?.instruction) {
+        voiceService.speak(step.instruction);
+      }
+    }
+  }, [currentStepIndex, navSteps, voiceMuted]);
 
   // 2. DISPARO AUTOMÁTICO DE ALERTA DE 1 MINUTO AL PASAJERO
   // "el pasajero tiene que recibir una respuesta automatica cuando el chofer esta a 1 minuto de llegar"

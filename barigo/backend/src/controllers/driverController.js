@@ -99,3 +99,31 @@ exports.updateVehicle = (req, res) => {
   const updated = db.setDriverProfile(driverId, req.body);
   return res.json({ message: 'Vehículo actualizado', profile: updated });
 };
+
+// Obtener perfil del chofer (para cockpit y apps)
+exports.getProfile = (req, res) => {
+  const driverId = req.params.driverId || req.user?.id || 'usr-chofer-1';
+  const user = db.findUserById(driverId);
+  const profile = db.getDriverProfile(driverId) || {};
+  const hasPass = db.hasActivePass(driverId);
+  const location = db.getDriverLocation(driverId);
+
+  return res.json({
+    id: driverId,
+    name: user ? user.fullName : (profile.fullName || 'Carlos Nahuel Huapi'),
+    fullName: user ? user.fullName : (profile.fullName || 'Carlos Nahuel Huapi'),
+    email: user ? user.email : '',
+    phone: user ? user.phone : '+54 9 294 422-3344',
+    rating: profile.ratingAvg || 4.96,
+    tripsCount: profile.totalTrips || 0,
+    vehicleModel: `${profile.vehicleMake || ''} ${profile.vehicleModel || ''}`.trim() || 'Chevrolet Onix Joy',
+    vehicleMake: profile.vehicleMake || 'Chevrolet',
+    vehicleName: profile.vehicleModel || 'Onix Joy',
+    vehicleColor: profile.vehicleColor || 'Blanco',
+    vehiclePlate: profile.vehiclePlate || 'AF 342 BZ',
+    hasPass24h: hasPass,
+    verified: profile.verificationStatus === 'approved',
+    location
+  });
+};
+

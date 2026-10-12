@@ -94,38 +94,7 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
       if (saved) {
         setTripHistory(JSON.parse(saved));
       } else {
-        const initialTrips = [
-          {
-            id: 'viaje-9104',
-            date: 'Hoy, 13:40',
-            originText: 'Centro Cívico de Bariloche',
-            destText: 'Hospital Zonal Ramón Carrillo (Moreno 601)',
-            originCoord: BARILOCHE_CENTER,
-            destCoord: { lat: -41.1378, lng: -71.3032 },
-            fare: 3500,
-            status: 'Completado',
-            driverName: 'Carlos Nahuel Huapi',
-            vehicle: 'Chevrolet Onix Joy • AF 342 BZ',
-            paymentMethod: 'Efectivo',
-            rating: 5
-          },
-          {
-            id: 'viaje-8722',
-            date: 'Ayer, 19:15',
-            originText: 'Chocolates Rapanui (Mitre 202)',
-            destText: 'Av. Bustillo Km 4 (Melipal)',
-            originCoord: { lat: -41.1337, lng: -71.3075 },
-            destCoord: { lat: -41.1275, lng: -71.3590 },
-            fare: 4800,
-            status: 'Completado',
-            driverName: 'Martín Bariloche',
-            vehicle: 'Renault Sandero • AE 921 MN',
-            paymentMethod: 'Mercado Pago',
-            rating: 5
-          }
-        ];
-        setTripHistory(initialTrips);
-        localStorage.setItem('barigo_passenger_trip_history', JSON.stringify(initialTrips));
+        setTripHistory([]);
       }
     } catch (e) {
       console.warn('Error reading trip history:', e);
@@ -205,95 +174,112 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
   // 4. Sincronización en tiempo real (Sockets y BroadcastChannel)
   useEffect(() => {
     const socket = apiService.getSocket();
-    if (socket) {
-      const handleAccepted = (data) => {
-        console.log('[Web Pasajero] ¡Viaje aceptado por chofer real!', data);
-        const incomingRide = data.ride || {};
-        const incomingDriver = data.driver || {};
-        const acceptedRide = {
-          ...incomingRide,
-          status: 'accepted',
-          driver: {
-            name: incomingDriver.fullName || incomingDriver.name || 'Carlos Nahuel Huapi',
-            vehicleModel: incomingDriver.vehicle || `${incomingDriver.vehicleModel || 'Chevrolet Onix'} (${incomingDriver.vehicleColor || 'Blanco'})`,
-            vehiclePlate: incomingDriver.plate || incomingDriver.vehiclePlate || 'AF 342 BZ',
-            phone: incomingDriver.phone || '+54 9 294 422-3344',
-            rating: incomingDriver.rating || 4.96
-          }
-        };
+    const handleAccepted = (data) => {
+      console.log('[Web Pasajero] ¡Viaje aceptado por chofer!', data);
+      const incomingRide = data.ride || data || {};
+      const incomingDriver = data.driver || incomingRide.driver || {};
+      const pLat = Number(incomingRide.originCoord?.lat || incomingRide.originLat || -41.1335);
+      const pLng = Number(incomingRide.originCoord?.lng || incomingRide.originLng || -71.3103);
+      const dLat = Number(incomingRide.destCoord?.lat || incomingRide.destinationLat || -41.1415);
+      const dLng = Number(incomingRide.destCoord?.lng || incomingRide.destinationLng || -71.3132);
+      const drvLat = Number.isFinite(Number(incomingDriver.lat)) ? Number(incomingDriver.lat) : (pLat + 0.002);
+      const drvLng = Number.isFinite(Number(incomingDriver.lng)) ? Number(incomingDriver.lng) : (pLng - 0.002);
 
-        setRideState(acceptedRide);
-        if (onRideChange) onRideChange(acceptedRide);
-        soundService.playSuccessSound();
-        voiceService.speakDriverAssigned(
-          acceptedRide.driver.name,
-          acceptedRide.driver.vehicleModel,
-          3
-        );
-      };
-
-      const handleStatusChanged = (data) => {
-        setRideState(prev => {
-          if (!prev) return null;
-          const updated = { ...prev, status: data.status, ...(data.ride || {}) };
-          if (onRideChange) onRideChange(updated);
-          return updated;
-        });
-
-        if (data.status === 'arriving') {
-          soundService.playChimeTone();
-          voiceService.speakDriverArrived('Tu chofer');
-        } else if (data.status === 'in_progress') {
-          voiceService.speakTripStarted(destText);
-        } else if (data.status === 'completed') {
-          soundService.playSuccessSound();
-          voiceService.speakTripCompleted(data.ride?.fare || data.ride?.estimatedFare || 3500);
-          setCompletedModalOpen(true);
+      const acceptedRide = {
+        ...incomingRide,
+        status: incomingRide.status || 'accepted',
+        originCoord: { lat: pLat, lng: pLng },
+        destCoord: { lat: dLat, lng: dLng },
+        originText: incomingRide.originText || incomingRide.originAddress || originText || 'Punto de partida',
+        destText: incomingRide.destText || incomingRide.destinationAddress || destText || 'Destino',
+        fare: incomingRide.fare || incomingRide.estimatedFare || 3500,
+        driver: {
+          id: incomingDriver.id || 'usr-chofer-1',
+          name: incomingDriver.fullName || incomingDriver.name || 'Carlos Nahuel Huapi',
+          vehicleModel: incomingDriver.vehicle || `${incomingDriver.vehicleModel || 'Chevrolet Onix'} (${incomingDriver.vehicleColor || 'Blanco'})`,
+          vehicleColor: incomingDriver.vehicleColor || 'Blanco',
+          vehiclePlate: incomingDriver.plate || incomingDriver.vehiclePlate || 'AF 342 BZ',
+          phone: incomingDriver.phone || '+54 9 294 422-3344',
+          rating: incomingDriver.rating || 4.96,
+          lat: drvLat,
+          lng: drvLng
         }
       };
 
-      const handleCancelled = () => {
-        setRideState(null);
-        setOneMinuteAlert(null);
-        setDriverAutoMessage(null);
-        if (onRideChange) onRideChange(null);
-      };
+      setRideState(acceptedRide);
+      if (onRideChange) onRideChange(acceptedRide);
+      soundService.playSuccessSound();
+      voiceService.speakDriverAssigned(
+        acceptedRide.driver.name,
+        acceptedRide.driver.vehicleModel,
+        3
+      );
+    };
 
-      const handleOneMinuteAlert = (data) => {
-        console.log('[Web Pasajero] ¡Alerta automática de 1 minuto recibida!', data);
-        setOneMinuteAlert(data);
-        setDriverAutoMessage(data?.message || '¡Hola! Estoy a 1 minuto de llegar a tu ubicación. Por favor salí al punto de encuentro.');
+    const handleStatusChanged = (data) => {
+      setRideState(prev => {
+        if (!prev) return null;
+        const updated = { ...prev, status: data.status, ...(data.ride || {}) };
+        if (onRideChange) onRideChange(updated);
+        return updated;
+      });
+
+      if (data.status === 'arriving') {
         soundService.playChimeTone();
-        voiceService.speakOneMinuteAlert();
-      };
+        voiceService.speakDriverArrived('Tu chofer');
+      } else if (data.status === 'in_progress') {
+        voiceService.speakTripStarted(destText);
+      } else if (data.status === 'completed') {
+        soundService.playSuccessSound();
+        voiceService.speakTripCompleted(data.ride?.fare || data.ride?.estimatedFare || 3500);
+        setCompletedModalOpen(true);
+      }
+    };
 
+    const handleCancelled = () => {
+      setRideState(null);
+      setOneMinuteAlert(null);
+      setDriverAutoMessage(null);
+      if (onRideChange) onRideChange(null);
+    };
+
+    const handleOneMinuteAlert = (data) => {
+      console.log('[Web Pasajero] ¡Alerta automática de 1 minuto recibida!', data);
+      setOneMinuteAlert(data);
+      setDriverAutoMessage(data?.message || '¡Hola! Estoy a 1 minuto de llegar a tu ubicación. Por favor salí al punto de encuentro.');
+      soundService.playChimeTone();
+      voiceService.speakOneMinuteAlert();
+    };
+
+    if (socket) {
       socket.on('ride:accepted', handleAccepted);
       socket.on('ride:status_changed', handleStatusChanged);
       socket.on('ride:cancelled', handleCancelled);
       socket.on('ride:one_minute_alert', handleOneMinuteAlert);
+    }
 
-      const unsubscribe = syncService.subscribe((msg) => {
-        if (msg.type === 'RIDE_UPDATED' || msg.type === 'RIDE_ACCEPTED' || msg.type === 'RIDE_ADVANCED') {
-          setRideState(msg.payload);
-          if (onRideChange) onRideChange(msg.payload);
-        } else if (msg.type === 'RIDE_CANCELLED') {
-          setRideState(null);
-          setOneMinuteAlert(null);
-          setDriverAutoMessage(null);
-          if (onRideChange) onRideChange(null);
-        } else if (msg.type === 'DRIVER_1MIN_ALERT') {
-          handleOneMinuteAlert(msg.payload);
-        }
-      });
+    const unsubscribe = syncService.subscribe((msg) => {
+      if (msg.type === 'RIDE_ACCEPTED' || msg.type === 'RIDE_ADVANCED' || msg.type === 'RIDE_UPDATED') {
+        handleAccepted(msg.payload);
+      } else if (msg.type === 'RIDE_CANCELLED') {
+        setRideState(null);
+        setOneMinuteAlert(null);
+        setDriverAutoMessage(null);
+        if (onRideChange) onRideChange(null);
+      } else if (msg.type === 'DRIVER_1MIN_ALERT') {
+        handleOneMinuteAlert(msg.payload);
+      }
+    });
 
-      return () => {
+    return () => {
+      if (socket) {
         socket.off('ride:accepted', handleAccepted);
         socket.off('ride:status_changed', handleStatusChanged);
         socket.off('ride:cancelled', handleCancelled);
         socket.off('ride:one_minute_alert', handleOneMinuteAlert);
-        unsubscribe();
-      };
-    }
+      }
+      unsubscribe();
+    };
   }, [onRideChange, destText]);
 
   useEffect(() => {
@@ -1019,7 +1005,7 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
               dropoff={destCoord}
               drivers={liveDrivers}
               assignedDriver={rideState?.driver}
-              assignedDriverLoc={rideState?.driver ? { lat: rideState.driver.lat, lng: rideState.driver.lng } : null}
+              assignedDriverLoc={(rideState?.driver && Number.isFinite(Number(rideState.driver.lat))) ? { lat: Number(rideState.driver.lat), lng: Number(rideState.driver.lng) } : null}
               routePolyline={routePolyline}
               center={originCoord}
               onMapClick={handleMapClick}
@@ -1170,7 +1156,7 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
               dropoff={destCoord}
               drivers={liveDrivers}
               assignedDriver={rideState?.driver}
-              assignedDriverLoc={rideState?.driver ? { lat: rideState.driver.lat, lng: rideState.driver.lng } : null}
+              assignedDriverLoc={(rideState?.driver && Number.isFinite(Number(rideState.driver.lat))) ? { lat: Number(rideState.driver.lat), lng: Number(rideState.driver.lng) } : null}
               routePolyline={routePolyline}
               center={originCoord}
               onMapClick={handleMapClick}

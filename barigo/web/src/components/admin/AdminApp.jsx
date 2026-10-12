@@ -17,35 +17,110 @@ import {
   Award,
   RefreshCw,
   Eye,
-  Database
+  Database,
+  Edit,
+  X,
+  Save,
+  Check,
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 import BarigoMap from '../BarigoMap';
 import { 
   BARILOCHE_CENTER, 
-  INITIAL_DRIVERS, 
   DEFAULT_FARE_SETTINGS, 
   BARILOCHE_PRESETS 
 } from '../../constants/barilocheData';
 import { soundService } from '../../services/soundService';
 import { apiService } from '../../services/apiService';
+import { syncService } from '../../services/syncService';
 
 export default function AdminApp() {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'fleet' | 'drivers' | 'fares'
-  const [driversList, setDriversList] = useState(INITIAL_DRIVERS);
+  const [driversList, setDriversList] = useState([]);
+  const [adminStats, setAdminStats] = useState({
+    totalRides: 0,
+    completedRides: 0,
+    totalVolume: 0,
+    totalDrivers: 1,
+    activeDriversWithPass: 1,
+    recentRides: []
+  });
   const [fareSettings, setFareSettings] = useState(DEFAULT_FARE_SETTINGS);
   const [driverFilter, setDriverFilter] = useState('all');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Modal de Configuración y Edición de Chofer
+  const [editingDriver, setEditingDriver] = useState(null);
+  const [driverFormData, setDriverFormData] = useState({
+    fullName: '',
+    phone: '',
+    email: '',
+    vehicleMake: 'Chevrolet',
+    vehicleModel: 'Onix Joy',
+    vehiclePlate: 'AF 342 BZ',
+    vehicleColor: 'Blanco',
+    vehicleYear: 2022,
+    ratingAvg: 4.96,
+    verificationStatus: 'approved',
+    hasPass: true
+  });
 
   // Calculadora interactiva de prueba para tarifas
   const [calcKm, setCalcKm] = useState(5.2);
   const [calcMins, setCalcMins] = useState(12);
 
-  useEffect(() => {
-    // Cargar estadísticas y choferes desde el backend real si está online
-    apiService.getOnlineDrivers().then(drivers => {
-      if (drivers && drivers.length > 0) {
+  const fetchDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      // 1. Cargar choferes registrados en el backend
+      const drivers = await apiService.getAdminDrivers();
+      if (Array.isArray(drivers) && drivers.length > 0) {
         setDriversList(drivers);
+      } else {
+        // Chofer de prueba base configurable por el administrador
+        setDriversList([
+          {
+            id: 'usr-chofer-1',
+            name: 'Carlos Nahuel Huapi',
+            fullName: 'Carlos Nahuel Huapi',
+            phone: '+54 9 294 422-3344',
+            email: 'chofer1@barigo.app',
+            vehicleModel: 'Chevrolet Onix Joy',
+            vehicleMake: 'Chevrolet',
+            vehicleName: 'Onix Joy',
+            vehiclePlate: 'AF 342 BZ',
+            vehicleColor: 'Blanco',
+            vehicleYear: 2022,
+            rating: 4.96,
+            tripsCount: 0,
+            todayEarnings: 0,
+            hasPass24h: true,
+            passHoursLeft: 24,
+            verified: true,
+            verificationStatus: 'approved',
+            status: 'online',
+            lat: -41.1348,
+            lng: -71.3055
+          }
+        ]);
       }
-    });
+
+      // 2. Cargar métricas reales (cero datos inventados)
+      const data = await apiService.getAdminStats();
+      if (data && data.stats) {
+        setAdminStats(data.stats);
+        if (data.settings) setFareSettings(data.settings);
+      }
+    } catch (e) {
+      console.warn('Error fetching admin data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
 
   const calculatePreviewFare = () => {
@@ -53,11 +128,108 @@ export default function AdminApp() {
     return Math.max(Math.round(raw / 50) * 50, fareSettings.minRideFare);
   };
 
-  const toggleDriverApproval = (driverId) => {
+  // Abrir modal para configurar chofer
+  const handleOpenEditDriver = (driver) => {
     soundService.playTapSound();
+    setEditingDriver(driver);
+    setDriverFormData({
+      fullName: driver.fullName || driver.name || '',
+      phone: driver.phone || '',
+      email: driver.email || '',
+      vehicleMake: driver.vehicleMake || 'Chevrolet',
+      vehicleModel: driver.vehicleName || driver.vehicleModel?.replace(driver.vehicleMake, '').trim() || 'Onix Joy',
+      vehiclePlate: driver.vehiclePlate || 'AF 342 BZ',
+      vehicleColor: driver.vehicleColor || 'Blanco',
+      vehicleYear: driver.vehicleYear || 2022,
+      ratingAvg: driver.rating || 4.96,
+      verificationStatus: driver.verificationStatus || (driver.verified ? 'approved' : 'pending'),
+      hasPass: !!driver.hasPass24h
+    });
+  };
+
+  // Guardar configuración del chofer en servidor
+  const handleSaveDriverConfig = async (e) => {
+    e.preventDefault();
+    if (!editingDriver) return;
+    soundService.playSuccessSound();
+
+    const updatedData = {
+      ...driverFormData,
+      vehicleModel: `${driverFormData.vehicleMake} ${driverFormData.vehicleModel}`.trim()
+    };
+
+    // 1. Guardar en backend
+    await apiService.updateAdminDriver(editingDriver.id, updatedData);
+
+    // 2. Actualizar lista local
+    setDriversList(prev => prev.map(d => {
+      if (d.id === editingDriver.id) {
+        return {
+          ...d,
+          name: updatedData.fullName,
+          fullName: updatedData.fullName,
+          phone: updatedData.phone,
+          email: updatedData.email,
+          vehicleMake: updatedData.vehicleMake,
+          vehicleModel: updatedData.vehicleModel,
+          vehiclePlate: updatedData.vehiclePlate,
+          vehicleColor: updatedData.vehicleColor,
+          vehicleYear: updatedData.vehicleYear,
+          rating: Number(updatedData.ratingAvg),
+          verified: updatedData.verificationStatus === 'approved',
+          verificationStatus: updatedData.verificationStatus,
+          hasPass24h: updatedData.hasPass
+        };
+      }
+      return d;
+    }));
+
+    // 3. Notificar sincronización en tiempo real a las apps
+    syncService.emit('DRIVER_PROFILE_UPDATED', {
+      id: editingDriver.id,
+      name: updatedData.fullName,
+      fullName: updatedData.fullName,
+      phone: updatedData.phone,
+      vehicleModel: updatedData.vehicleModel,
+      vehiclePlate: updatedData.vehiclePlate,
+      vehicleColor: updatedData.vehicleColor,
+      rating: Number(updatedData.ratingAvg),
+      verified: updatedData.verificationStatus === 'approved'
+    });
+
+    setEditingDriver(null);
+  };
+
+  // Aprobar o suspender chofer rápidamente
+  const handleToggleDriverStatus = async (driver) => {
+    soundService.playTapSound();
+    const newStatus = driver.verified ? 'suspended' : 'approved';
+    await apiService.verifyDriver(driver.id, newStatus);
+
+    setDriversList(prev => prev.map(d => {
+      if (d.id === driver.id) {
+        return {
+          ...d,
+          verified: newStatus === 'approved',
+          verificationStatus: newStatus
+        };
+      }
+      return d;
+    }));
+
+    syncService.emit('DRIVER_PROFILE_UPDATED', {
+      id: driver.id,
+      verified: newStatus === 'approved'
+    });
+  };
+
+  // Otorgar pase de 24hs a un chofer
+  const handleGrantPass = async (driverId) => {
+    soundService.playSuccessSound();
+    await apiService.grantDriverPass(driverId);
     setDriversList(prev => prev.map(d => {
       if (d.id === driverId) {
-        return { ...d, verified: !d.verified };
+        return { ...d, hasPass24h: true, passHoursLeft: 24 };
       }
       return d;
     }));
@@ -143,6 +315,10 @@ export default function AdminApp() {
           </div>
 
           <div className="topbar-actions">
+            <button className="gps-pill-btn" onClick={fetchDashboardData} title="Refrescar datos reales">
+              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+              <span>Actualizar</span>
+            </button>
             <div className="live-status-pill">
               <span className="live-dot-green"></span>
               <span>WebSockets GPS en Línea</span>
@@ -150,7 +326,7 @@ export default function AdminApp() {
           </div>
         </header>
 
-        {/* VISTA 1: DASHBOARD EJECUTIVO */}
+        {/* VISTA 1: DASHBOARD EJECUTIVO (DATOS 100% REALES) */}
         {activeTab === 'dashboard' && (
           <div className="admin-view-content animate-fade-in">
             {/* Tarjetas de Métricas Clave */}
@@ -160,20 +336,22 @@ export default function AdminApp() {
                   <span className="kpi-title">Recaudación Pases 24h</span>
                   <Award size={18} color="#00e5ff" />
                 </div>
-                <div className="kpi-value">$126.000</div>
+                <div className="kpi-value">
+                  ${(adminStats.activeDriversWithPass * fareSettings.driverPass24hPrice).toLocaleString('es-AR')}
+                </div>
                 <div className="kpi-bottom text-cyan">
-                  <span>28 pases activos en Bariloche</span>
+                  <span>{adminStats.activeDriversWithPass} pases 24h activos</span>
                 </div>
               </div>
 
               <div className="kpi-card emerald-glow">
                 <div className="kpi-top">
-                  <span className="kpi-title">Viajes Completados Hoy</span>
+                  <span className="kpi-title">Viajes Completados</span>
                   <Car size={18} color="#10b981" />
                 </div>
-                <div className="kpi-value">142 viajes</div>
+                <div className="kpi-value">{adminStats.completedRides || 0} viajes</div>
                 <div className="kpi-bottom text-emerald">
-                  <span>En Mitre, Bustillo, Melipal y Catedral</span>
+                  <span>Volumen: ${(adminStats.totalVolume || 0).toLocaleString('es-AR')}</span>
                 </div>
               </div>
 
@@ -184,7 +362,7 @@ export default function AdminApp() {
                 </div>
                 <div className="kpi-value">{driversList.filter(d => d.status === 'online').length} en línea</div>
                 <div className="kpi-bottom text-gold">
-                  <span>De {driversList.length} registrados</span>
+                  <span>De {driversList.length} en el padrón</span>
                 </div>
               </div>
 
@@ -200,47 +378,36 @@ export default function AdminApp() {
               </div>
             </div>
 
-            {/* Grilla Dividida: Actividad Reciente y Mapa Resumido */}
+            {/* Grilla Dividida: Actividad Real y Radar */}
             <div className="dashboard-split-grid">
               <div className="admin-card-box">
                 <div className="card-box-header">
                   <h3>Últimos Viajes Registrados</h3>
                   <span className="card-sub-tag">En vivo</span>
                 </div>
-                <div className="recent-trips-table">
-                  <div className="trip-row-item">
-                    <div className="tr-time">11:38</div>
-                    <div className="tr-route">
-                      <strong>Centro Cívico</strong> → Av. Bustillo Km 4
-                    </div>
-                    <div className="tr-driver">Carlos N. (Onix)</div>
-                    <div className="tr-fare text-emerald">$2.850</div>
+                
+                {adminStats.recentRides && adminStats.recentRides.length > 0 ? (
+                  <div className="recent-trips-table">
+                    {adminStats.recentRides.map((ride, idx) => (
+                      <div className="trip-row-item" key={ride.id || idx}>
+                        <div className="tr-time">
+                          {ride.requestedAt ? new Date(ride.requestedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : 'Hoy'}
+                        </div>
+                        <div className="tr-route">
+                          <strong>{ride.originAddress || ride.originText || 'Origen'}</strong> → {ride.destinationAddress || ride.destText || 'Destino'}
+                        </div>
+                        <div className="tr-driver">{ride.driverName || 'Chofer asignado'}</div>
+                        <div className="tr-fare text-emerald">${(ride.finalFare || ride.fare || 0).toLocaleString('es-AR')}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="trip-row-item">
-                    <div className="tr-time">11:24</div>
-                    <div className="tr-route">
-                      <strong>Terminal de Ómnibus</strong> → Catedral Base
-                    </div>
-                    <div className="tr-driver">Matías H. (Duster 4x4)</div>
-                    <div className="tr-fare text-emerald">$4.800</div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px 15px', color: '#64748b' }}>
+                    <Clock size={36} style={{ margin: '0 auto 10px', opacity: 0.5 }} />
+                    <p style={{ margin: 0, fontWeight: 600, color: '#94a3b8' }}>No hay viajes registrados aún en el sistema</p>
+                    <span style={{ fontSize: '0.8rem' }}>Los viajes solicitados y aceptados en el simulador aparecerán aquí automáticamente.</span>
                   </div>
-                  <div className="trip-row-item">
-                    <div className="tr-time">11:10</div>
-                    <div className="tr-route">
-                      <strong>Onelli y Brown</strong> → Melipal
-                    </div>
-                    <div className="tr-driver">Esteban S. (Etios)</div>
-                    <div className="tr-fare text-emerald">$3.100</div>
-                  </div>
-                  <div className="trip-row-item">
-                    <div className="tr-time">10:52</div>
-                    <div className="tr-route">
-                      <strong>Mitre 250</strong> → Aeropuerto BRC
-                    </div>
-                    <div className="tr-driver">Luciana O. (Virtus)</div>
-                    <div className="tr-fare text-emerald">$7.200</div>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="admin-card-box">
@@ -298,9 +465,20 @@ export default function AdminApp() {
           </div>
         )}
 
-        {/* VISTA 3: GESTIÓN DE CHOFERES */}
+        {/* VISTA 3: PADRÓN DE CHOFERES (CONFIGURABLE POR EL ADMINISTRADOR) */}
         {activeTab === 'drivers' && (
           <div className="admin-view-content animate-fade-in">
+            <div className="admin-card-box" style={{ marginBottom: '16px' }}>
+              <div className="card-box-header">
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Padrón Oficial y Habilitaciones BariGo</h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                    Configura aquí los datos del chofer de prueba y aprueba a los conductores que soliciten incorporarse a la app.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="drivers-table-card">
               <table className="admin-data-table">
                 <thead>
@@ -308,9 +486,9 @@ export default function AdminApp() {
                     <th>Chofer</th>
                     <th>Vehículo y Patente</th>
                     <th>Pase 24h</th>
-                    <th>Viajes Realizados</th>
-                    <th>Recaudación Hoy</th>
-                    <th>Habilitación Municipal</th>
+                    <th>Viajes</th>
+                    <th>Recaudación</th>
+                    <th>Habilitación</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -319,32 +497,45 @@ export default function AdminApp() {
                     <tr key={driver.id}>
                       <td>
                         <div className="table-driver-meta">
-                          <div className="table-avatar">{driver.name.charAt(0)}</div>
+                          <div className="table-avatar">{driver.name?.charAt(0) || 'C'}</div>
                           <div>
                             <strong>{driver.name}</strong>
-                            <div className="meta-sub">⭐ {driver.rating} • {driver.phone}</div>
+                            <div className="meta-sub">⭐ {driver.rating || 4.96} • {driver.phone}</div>
                           </div>
                         </div>
                       </td>
                       <td>
-                        <strong>{driver.vehicleModel}</strong>
+                        <strong>{driver.vehicleModel || `${driver.vehicleMake} ${driver.vehicleName}`}</strong>
                         <div className="meta-sub">{driver.vehicleColor} • Patente: <span className="plate-tag">{driver.vehiclePlate}</span></div>
                       </td>
                       <td>
                         {driver.hasPass24h ? (
-                          <span className="badge-pass active">Quedan {driver.passHoursLeft}hs</span>
+                          <span className="badge-pass active">Activo (24hs)</span>
                         ) : (
-                          <span className="badge-pass expired">Sin Pase</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="badge-pass expired">Sin Pase</span>
+                            <button 
+                              className="gps-pill-btn mini-btn" 
+                              onClick={() => handleGrantPass(driver.id)}
+                              title="Activar pase de prueba por 24hs"
+                            >
+                              + Activar
+                            </button>
+                          </div>
                         )}
                       </td>
-                      <td>{driver.tripsCount} viajes</td>
+                      <td>{driver.tripsCount || 0}</td>
                       <td>
-                        <strong className="text-emerald">${driver.todayEarnings.toLocaleString('es-AR')}</strong>
+                        <strong className="text-emerald">${(driver.todayEarnings || 0).toLocaleString('es-AR')}</strong>
                       </td>
                       <td>
                         {driver.verified ? (
                           <span className="badge-verified ok">
                             <CheckCircle2 size={13} /> Aprobado
+                          </span>
+                        ) : driver.verificationStatus === 'suspended' ? (
+                          <span className="badge-verified suspended" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)' }}>
+                            <XCircle size={13} /> Suspendido
                           </span>
                         ) : (
                           <span className="badge-verified pending">
@@ -353,12 +544,36 @@ export default function AdminApp() {
                         )}
                       </td>
                       <td>
-                        <button 
-                          className={`btn-toggle-verify ${driver.verified ? 'revoke' : 'approve'}`}
-                          onClick={() => toggleDriverApproval(driver.id)}
-                        >
-                          {driver.verified ? 'Suspender' : 'Aprobar'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button 
+                            className="btn-configure-driver"
+                            onClick={() => handleOpenEditDriver(driver)}
+                            title="Configurar datos del chofer"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: '#1e293b',
+                              border: '1px solid #334155',
+                              color: '#38bdf8',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              fontSize: '0.78rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            <Edit size={13} />
+                            <span>Configurar</span>
+                          </button>
+
+                          <button 
+                            className={`btn-toggle-verify ${driver.verified ? 'revoke' : 'approve'}`}
+                            onClick={() => handleToggleDriverStatus(driver)}
+                          >
+                            {driver.verified ? 'Suspender' : 'Aprobar'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -493,6 +708,191 @@ export default function AdminApp() {
           </div>
         )}
       </main>
+
+      {/* ============================================================ */}
+      {/* MODAL PARA CONFIGURAR CHOFER DE PRUEBA Y APROBAR SOLICITUDES */}
+      {/* ============================================================ */}
+      {editingDriver && (
+        <div className="modal-backdrop" onClick={() => setEditingDriver(null)}>
+          <div 
+            className="completed-trip-card animate-scale-up"
+            style={{ maxWidth: '520px', width: '92%', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Edit size={20} color="#00e5ff" /> Configurar Datos del Chofer
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  ID: {editingDriver.id} • Modifica los datos para el chofer de prueba y nuevas solicitudes
+                </p>
+              </div>
+              <button 
+                onClick={() => setEditingDriver(null)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDriverConfig} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                  Nombre y Apellido
+                </label>
+                <input 
+                  type="text" 
+                  value={driverFormData.fullName}
+                  onChange={(e) => setDriverFormData({ ...driverFormData, fullName: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Teléfono
+                  </label>
+                  <input 
+                    type="text" 
+                    value={driverFormData.phone}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, phone: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Email
+                  </label>
+                  <input 
+                    type="email" 
+                    value={driverFormData.email}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, email: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Marca del Vehículo
+                  </label>
+                  <input 
+                    type="text" 
+                    value={driverFormData.vehicleMake}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, vehicleMake: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Modelo
+                  </label>
+                  <input 
+                    type="text" 
+                    value={driverFormData.vehicleModel}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, vehicleModel: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Patente
+                  </label>
+                  <input 
+                    type="text" 
+                    value={driverFormData.vehiclePlate}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, vehiclePlate: e.target.value.toUpperCase() })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc', fontWeight: 700 }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Color
+                  </label>
+                  <input 
+                    type="text" 
+                    value={driverFormData.vehicleColor}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, vehicleColor: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Calificación
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    min="1"
+                    max="5"
+                    value={driverFormData.ratingAvg}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, ratingAvg: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px', fontWeight: 600 }}>
+                    Habilitación Municipal
+                  </label>
+                  <select 
+                    value={driverFormData.verificationStatus}
+                    onChange={(e) => setDriverFormData({ ...driverFormData, verificationStatus: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#f8fafc' }}
+                  >
+                    <option value="approved">✅ Aprobado</option>
+                    <option value="pending">⏳ Pendiente</option>
+                    <option value="suspended">⛔ Suspendido</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#f8fafc', fontSize: '0.88rem', fontWeight: 600, marginTop: '16px' }}>
+                    <input 
+                      type="checkbox"
+                      checked={driverFormData.hasPass}
+                      onChange={(e) => setDriverFormData({ ...driverFormData, hasPass: e.target.checked })}
+                      style={{ width: '18px', height: '18px', accentColor: '#00e5ff' }}
+                    />
+                    <span>Pase 24hs Activo</span>
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setEditingDriver(null)}
+                  style={{ flex: 1, padding: '12px', background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', color: '#94a3b8', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ flex: 2, padding: '12px', background: 'linear-gradient(135deg, #00e5ff, #00b4d8)', border: 'none', borderRadius: '10px', color: '#090e17', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <Save size={16} />
+                  <span>Guardar Configuración</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

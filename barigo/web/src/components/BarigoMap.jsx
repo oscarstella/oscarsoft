@@ -84,149 +84,163 @@ export default function BarigoMap({
     const map = mapInstanceRef.current;
     if (!map || !markersLayerRef.current || !routeLayerRef.current) return;
 
-    markersLayerRef.current.clearLayers();
-    routeLayerRef.current.clearLayers();
+    try {
+      markersLayerRef.current.clearLayers();
+      routeLayerRef.current.clearLayers();
 
-    // 1. Choferes Cercanos (si no hay chofer asignado)
-    if (!assignedDriver && drivers.length > 0) {
-      drivers.forEach(driver => {
-        if (driver.status === 'offline') return;
+      const isValidCoord = (c) => c && typeof c === 'object' && Number.isFinite(Number(c.lat)) && Number.isFinite(Number(c.lng));
 
-        const carHtml = `
-          <div class="leaflet-driver-marker ${driver.status}">
-            <div class="driver-pulse"></div>
-            <div class="driver-car-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      // 1. Choferes Cercanos (si no hay chofer asignado)
+      if (!assignedDriver && Array.isArray(drivers) && drivers.length > 0) {
+        drivers.forEach(driver => {
+          if (!driver || driver.status === 'offline' || !isValidCoord(driver)) return;
+
+          const carHtml = `
+            <div class="leaflet-driver-marker ${driver.status || 'online'}">
+              <div class="driver-pulse"></div>
+              <div class="driver-car-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9C2.1 11.1 2 11.5 2 12v4c0 .6.4 1 1 1h2"/>
+                  <circle cx="7" cy="17" r="2"/>
+                  <path d="M9 17h6"/>
+                  <circle cx="17" cy="17" r="2"/>
+                </svg>
+              </div>
+              <div class="driver-tag">${driver.vehiclePlate || 'BariGo'}</div>
+            </div>
+          `;
+
+          const icon = L.divIcon({
+            html: carHtml,
+            className: 'custom-driver-div-icon',
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+          });
+
+          L.marker([Number(driver.lat), Number(driver.lng)], { icon })
+            .bindPopup(`<b>${driver.name}</b><br/>${driver.vehicleModel || 'Vehículo'}<br/>⭐ ${driver.rating || 5.0}`)
+            .addTo(markersLayerRef.current);
+        });
+      }
+
+      // 2. Chofer Asignado (Con halo verde y seguimiento en vivo)
+      if (assignedDriver && isValidCoord(assignedDriverLoc)) {
+        const assignedHtml = `
+          <div class="leaflet-driver-marker assigned">
+            <div class="driver-pulse-green"></div>
+            <div class="driver-car-icon assigned">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9C2.1 11.1 2 11.5 2 12v4c0 .6.4 1 1 1h2"/>
                 <circle cx="7" cy="17" r="2"/>
                 <path d="M9 17h6"/>
                 <circle cx="17" cy="17" r="2"/>
               </svg>
             </div>
-            <div class="driver-tag">${driver.vehiclePlate || 'BariGo'}</div>
+            <div class="driver-tag assigned">${assignedDriver.name?.split(' ')[0] || 'Chofer'} • ${assignedDriver.vehiclePlate || ''}</div>
           </div>
         `;
 
-        const icon = L.divIcon({
-          html: carHtml,
+        const assignedIcon = L.divIcon({
+          html: assignedHtml,
           className: 'custom-driver-div-icon',
-          iconSize: [44, 44],
-          iconAnchor: [22, 22]
+          iconSize: [50, 50],
+          iconAnchor: [25, 25]
         });
 
-        L.marker([driver.lat, driver.lng], { icon })
-          .bindPopup(`<b>${driver.name}</b><br/>${driver.vehicleModel}<br/>⭐ ${driver.rating}`)
+        L.marker([Number(assignedDriverLoc.lat), Number(assignedDriverLoc.lng)], { icon: assignedIcon })
           .addTo(markersLayerRef.current);
-      });
-    }
+      }
 
-    // 2. Chofer Asignado (Con halo verde y seguimiento en vivo)
-    if (assignedDriver && assignedDriverLoc) {
-      const assignedHtml = `
-        <div class="leaflet-driver-marker assigned">
-          <div class="driver-pulse-green"></div>
-          <div class="driver-car-icon assigned">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9C2.1 11.1 2 11.5 2 12v4c0 .6.4 1 1 1h2"/>
-              <circle cx="7" cy="17" r="2"/>
-              <path d="M9 17h6"/>
-              <circle cx="17" cy="17" r="2"/>
-            </svg>
+      // 3. Marcador de Origen (Beacon Cyan)
+      if (isValidCoord(pickup) && !hidePickupMarker) {
+        const pickupHtml = `
+          <div class="leaflet-pickup-marker">
+            <div class="pickup-ring"></div>
+            <div class="pickup-core"></div>
+            <div class="pickup-label">${pickupLabel}</div>
           </div>
-          <div class="driver-tag assigned">${assignedDriver.name?.split(' ')[0]} • ${assignedDriver.vehiclePlate || ''}</div>
-        </div>
-      `;
+        `;
+        const pickupIcon = L.divIcon({
+          html: pickupHtml,
+          className: 'custom-pickup-div-icon',
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        });
 
-      const assignedIcon = L.divIcon({
-        html: assignedHtml,
-        className: 'custom-driver-div-icon',
-        iconSize: [50, 50],
-        iconAnchor: [25, 25]
-      });
+        L.marker([Number(pickup.lat), Number(pickup.lng)], { icon: pickupIcon })
+          .addTo(markersLayerRef.current);
+      }
 
-      L.marker([assignedDriverLoc.lat, assignedDriverLoc.lng], { icon: assignedIcon })
-        .addTo(markersLayerRef.current);
-    }
-
-    // 3. Marcador de Origen (Beacon Cyan)
-    if (pickup && !hidePickupMarker) {
-      const pickupHtml = `
-        <div class="leaflet-pickup-marker">
-          <div class="pickup-ring"></div>
-          <div class="pickup-core"></div>
-          <div class="pickup-label">${pickupLabel}</div>
-        </div>
-      `;
-      const pickupIcon = L.divIcon({
-        html: pickupHtml,
-        className: 'custom-pickup-div-icon',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
-      });
-
-      L.marker([pickup.lat, pickup.lng], { icon: pickupIcon })
-        .addTo(markersLayerRef.current);
-    }
-
-    // 4. Marcador de Destino (Pin Amber o Verde para Pasajero)
-    if (dropoff) {
-      const isPassengerPin = dropoffLabel.toLowerCase().includes('pasajero');
-      const dropoffHtml = `
-        <div class="leaflet-dropoff-marker ${isPassengerPin ? 'passenger-target' : ''}">
-          <div class="dropoff-pin" style="${isPassengerPin ? 'background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399;' : ''}">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-              <circle cx="12" cy="10" r="3"/>
-            </svg>
+      // 4. Marcador de Destino (Pin Amber o Verde para Pasajero)
+      if (isValidCoord(dropoff)) {
+        const isPassengerPin = dropoffLabel.toLowerCase().includes('pasajero');
+        const dropoffHtml = `
+          <div class="leaflet-dropoff-marker ${isPassengerPin ? 'passenger-target' : ''}">
+            <div class="dropoff-pin" style="${isPassengerPin ? 'background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399;' : ''}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div class="dropoff-label" style="${isPassengerPin ? 'background: #064e3b; border-color: #10b981; color: #a7f3d0;' : ''}">${dropoffLabel}</div>
           </div>
-          <div class="dropoff-label" style="${isPassengerPin ? 'background: #064e3b; border-color: #10b981; color: #a7f3d0;' : ''}">${dropoffLabel}</div>
-        </div>
-      `;
-      const dropoffIcon = L.divIcon({
-        html: dropoffHtml,
-        className: 'custom-dropoff-div-icon',
-        iconSize: [40, 48],
-        iconAnchor: [20, 44]
-      });
+        `;
+        const dropoffIcon = L.divIcon({
+          html: dropoffHtml,
+          className: 'custom-dropoff-div-icon',
+          iconSize: [40, 48],
+          iconAnchor: [20, 44]
+        });
 
-      L.marker([dropoff.lat, dropoff.lng], { icon: dropoffIcon })
-        .addTo(markersLayerRef.current);
-    }
+        L.marker([Number(dropoff.lat), Number(dropoff.lng)], { icon: dropoffIcon })
+          .addTo(markersLayerRef.current);
+      }
 
-    // 5. Línea de Ruta Neón (Polyline)
-    if (pickup && dropoff) {
-      const points = routePolyline.length > 0 
-        ? routePolyline 
-        : [
-            [pickup.lat, pickup.lng],
-            // Punto intermedio estilizado en Bariloche
-            [(pickup.lat + dropoff.lat) / 2 + 0.002, (pickup.lng + dropoff.lng) / 2 - 0.001],
-            [dropoff.lat, dropoff.lng]
+      // 5. Línea de Ruta Neón (Polyline)
+      if (isValidCoord(pickup) && isValidCoord(dropoff)) {
+        let points = [];
+        if (Array.isArray(routePolyline) && routePolyline.length >= 2) {
+          points = routePolyline.filter(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+        }
+
+        if (points.length < 2) {
+          points = [
+            [Number(pickup.lat), Number(pickup.lng)],
+            [(Number(pickup.lat) + Number(dropoff.lat)) / 2 + 0.002, (Number(pickup.lng) + Number(dropoff.lng)) / 2 - 0.001],
+            [Number(dropoff.lat), Number(dropoff.lng)]
           ];
+        }
 
-      // Sombra oscura y halo exterior de la ruta
-      L.polyline(points, {
-        color: '#00293d',
-        weight: 9,
-        opacity: 0.8,
-        lineCap: 'round',
-        lineJoin: 'round'
-      }).addTo(routeLayerRef.current);
+        // Sombra oscura y halo exterior de la ruta
+        L.polyline(points, {
+          color: '#00293d',
+          weight: 9,
+          opacity: 0.8,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(routeLayerRef.current);
 
-      // Trazo Neón Cian resplandeciente calle por calle (Estilo Uber / Cabify)
-      L.polyline(points, {
-        color: '#00e5ff',
-        weight: 5,
-        opacity: 1.0,
-        lineCap: 'round',
-        lineJoin: 'round'
-      }).addTo(routeLayerRef.current);
+        // Trazo Neón Cian resplandeciente calle por calle (Estilo Uber / Cabify)
+        L.polyline(points, {
+          color: '#00e5ff',
+          weight: 5,
+          opacity: 1.0,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(routeLayerRef.current);
 
-      // Si tenemos origen y destino, encuadrar el mapa
-      const bounds = L.latLngBounds(points);
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-    } else if (pickup) {
-      map.panTo([pickup.lat, pickup.lng], { animate: true });
+        // Si tenemos origen y destino, encuadrar el mapa
+        try {
+          const bounds = L.latLngBounds(points);
+          if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+          }
+        } catch {}
+      } else if (isValidCoord(pickup)) {
+        map.panTo([Number(pickup.lat), Number(pickup.lng)], { animate: true });
+      }
+    } catch (layerErr) {
+      console.warn('[BarigoMap] Error seguro al renderizar capas del mapa:', layerErr);
     }
   }, [pickup, dropoff, drivers, assignedDriver, assignedDriverLoc, routePolyline]);
 

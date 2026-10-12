@@ -112,6 +112,76 @@ class ApiService {
     return null;
   }
 
+  async getAdminDrivers() {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/drivers`, {
+        headers: {
+          ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+        }
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {}
+    return [];
+  }
+
+  async updateAdminDriver(driverId, driverData) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+        },
+        body: JSON.stringify(driverData)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {}
+    return null;
+  }
+
+  async verifyDriver(driverId, status) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}/verify`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+        },
+        body: JSON.stringify({ status })
+      });
+      return res.ok;
+    } catch {}
+    return false;
+  }
+
+  async grantDriverPass(driverId) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}/pass`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+        }
+      });
+      return res.ok;
+    } catch {}
+    return false;
+  }
+
+  async getDriverProfile(driverId = 'usr-chofer-1') {
+    try {
+      const res = await fetch(`${API_BASE_URL}/drivers/profile/${driverId}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {}
+    return null;
+  }
+
   async updateFareSettings(fares) {
     try {
       const res = await fetch(`${API_BASE_URL}/admin/fares`, {
