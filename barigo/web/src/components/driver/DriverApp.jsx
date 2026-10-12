@@ -348,8 +348,9 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     if (onRideChange) onRideChange(acceptedRide);
     syncService.emit('RIDE_ACCEPTED', acceptedRide);
 
-    // Locución DENTRO del toque del chofer (habilita la voz en el celular)
-    voiceService.speak('Viaje aceptado.');
+    // Locución clara y completa DENTRO del toque del chofer
+    const originPlace = cleanText(acceptedRide.originText) || 'el punto de encuentro';
+    voiceService.speak(`Viaje aceptado. Dirigite a ${originPlace}.`);
 
     // Notificar al socket del backend
     const socket = apiService.getSocket();

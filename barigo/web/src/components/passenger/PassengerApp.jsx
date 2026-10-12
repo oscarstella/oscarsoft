@@ -42,7 +42,7 @@ import { getBarilocheWeather } from '../../services/weatherService';
 export default function PassengerApp({ externalRide, onRideChange, viewMode = 'phone' }) {
   // Pasos: 1 = Origen, 2 = Destino, 3 = Categoría Auto, 4 = Pago y Confirmar
   const [currentStep, setCurrentStep] = useState(1);
-  const [originText, setOriginText] = useState('');
+  const [originText, setOriginText] = useState('Centro Cívico de Bariloche');
   const [originCoord, setOriginCoord] = useState(BARILOCHE_CENTER);
   const [destText, setDestText] = useState('');
   const [destCoord, setDestCoord] = useState(null);
@@ -155,14 +155,21 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
       setGpsAccuracy(pos.accuracy ? Math.round(pos.accuracy) : null);
       setIsRealGpsActive(pos.isRealGps);
 
-      // Solo si el usuario tocó explícitamente el botón de GPS completamos el texto del input
+      const addressName = await gpsService.reverseGeocode(pos.lat, pos.lng);
+      if (addressName) {
+        setOriginText(addressName);
+      } else if (!originText) {
+        setOriginText('Centro Cívico de Bariloche');
+      }
+
       if (!initial) {
-        const addressName = await gpsService.reverseGeocode(pos.lat, pos.lng);
-        setOriginText(addressName || 'Mi Ubicación Actual');
         soundService.playSuccessSound();
       }
     } catch (e) {
       console.warn('Error GPS:', e);
+      if (!originText) {
+        setOriginText('Centro Cívico de Bariloche');
+      }
     } finally {
       setIsLocatingGps(false);
     }

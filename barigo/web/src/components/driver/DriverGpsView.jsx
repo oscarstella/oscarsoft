@@ -84,8 +84,11 @@ export default function DriverGpsView({
               if (!voiceMuted) {
                 const firstStep = res.steps[0];
                 const nextStep = res.steps[1];
-                const nextPrompt = nextStep ? `En ${firstStep.distanceMeters || 150} metros, ${nextStep.instruction.toLowerCase()}.` : '';
-                voiceService.speakAcceptAndStartToPickup(originName, firstStep.street, nextPrompt);
+                if (nextStep) {
+                  setTimeout(() => {
+                    voiceService.speakTurnByTurn(nextStep.instruction, firstStep.distanceMeters);
+                  }, 3000);
+                }
               }
             }
           }
@@ -131,8 +134,11 @@ export default function DriverGpsView({
               if (!voiceMuted) {
                 const firstStep = res.steps[0];
                 const nextStep = res.steps[1];
-                const nextPrompt = nextStep ? `En ${firstStep.distanceMeters || 150} metros, ${nextStep.instruction.toLowerCase()}.` : '';
-                voiceService.speakStartTripToDestination(destName, firstStep.street, nextPrompt);
+                if (nextStep) {
+                  setTimeout(() => {
+                    voiceService.speakTurnByTurn(nextStep.instruction, firstStep.distanceMeters);
+                  }, 3000);
+                }
               }
             }
           }
