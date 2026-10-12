@@ -15,7 +15,8 @@ import {
   MapPin, 
   Flag, 
   Car, 
-  Radio
+  Radio,
+  X
 } from 'lucide-react';
 import BarigoMap from '../BarigoMap';
 import { voiceService } from '../../services/voiceService';
@@ -41,6 +42,7 @@ export default function DriverGpsView({
   onDriverArrived,
   onStartTrip,
   onCompleteTrip,
+  onCancelTrip,
   viewMode = 'phone'
 }) {
   const [navRoutePolyline, setNavRoutePolyline] = useState([]);
@@ -319,6 +321,20 @@ export default function DriverGpsView({
               {voiceMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
               <span>{voiceMuted ? 'Voz silenciada' : 'Voz activa'}</span>
             </button>
+            {onCancelTrip && (
+              <button 
+                className="gps-pill-btn exit-gps-btn"
+                onClick={() => {
+                  soundService.playTapSound();
+                  voiceService.speak("Saliendo de la navegación GPS.");
+                  onCancelTrip();
+                }}
+                title="Salir de navegación GPS"
+              >
+                <X size={15} color="#ef4444" />
+                <span>Salir</span>
+              </button>
+            )}
           </div>
         </div>
 

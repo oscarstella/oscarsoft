@@ -128,6 +128,23 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     }
   }, [activeRide, navPhase, driverLoc.lat, driverLoc.lng]);
 
+  // Sincronizar viaje recibido desde prop externalRide (ej: creado desde Pasajero o Navbar)
+  useEffect(() => {
+    if (externalRide) {
+      if (externalRide.status === 'requested') {
+        setIncomingOffer(externalRide);
+      } else if (externalRide.status === 'accepted' || externalRide.status === 'arriving' || externalRide.status === 'in_progress') {
+        setActiveRide(externalRide);
+        if (externalRide.status === 'arriving') setNavPhase('at_pickup');
+        else if (externalRide.status === 'in_progress') setNavPhase('to_dest');
+        else setNavPhase('to_pickup');
+      }
+    } else {
+      setActiveRide(null);
+      setIncomingOffer(null);
+    }
+  }, [externalRide]);
+
   // 1. Geolocalización GPS Real del Conductor
   useEffect(() => {
     // Obtener posición inicial
@@ -350,6 +367,7 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
 
     // Desbloqueo de audio seguro dentro del gesto del chofer
     voiceService.unlockAudio();
+    voiceService.speak(`Viaje aceptado. Dirigite a ${cleanText(acceptedRide.originText)}.`);
 
     // Notificar al socket del backend
     const socket = apiService.getSocket();
@@ -433,6 +451,46 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
     }
 
     voiceService.speak(`Viaje finalizado. Cobrar ${fare} pesos al pasajero.`);
+  };
+
+  // Iniciar Navegación GPS en vivo por Bariloche
+  const handleStartGpsNavigation = () => {
+    soundService.playSuccessSound();
+    voiceService.unlockAudio();
+    voiceService.speak("Iniciando navegación GPS. Dirigite a Centro Cívico.");
+
+    const testRide = {
+      id: `gps-live-${Date.now()}`,
+      passengerName: 'Oscar Stella',
+      passengerPhone: '+54 9 294 400-1122',
+      originText: 'Centro Cívico, Bariloche',
+      destText: 'Sanatorio San Carlos, Pasaje Gutiérrez 980, Bariloche',
+      originCoord: { lat: -41.1335, lng: -71.3103 },
+      destCoord: { lat: -41.14155, lng: -71.3132 },
+      fare: 3800,
+      distanceKm: 2.1,
+      durationMins: 6,
+      status: 'accepted',
+      pin: '8419',
+      driver: {
+        ...driverProfile,
+        lat: driverLoc.lat,
+        lng: driverLoc.lng
+      }
+    };
+
+    setActiveRide(testRide);
+    setNavPhase('to_pickup');
+    if (onRideChange) onRideChange(testRide);
+  };
+
+  // Cancelar o salir de navegación GPS
+  const handleCancelTrip = () => {
+    soundService.playTapSound();
+    voiceService.speak("Navegación GPS finalizada.");
+    setActiveRide(null);
+    setNavPhase('to_pickup');
+    if (onRideChange) onRideChange(null);
   };
 
   // Comprar Pase 24hs
@@ -529,6 +587,16 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
           <span>{isOnline ? 'Desconectar' : 'Conectar'}</span>
         </button>
       </div>
+
+      {/* Botón Acceso Directo Navegación GPS Turn-by-Turn en Vivo */}
+      <button 
+        className="driver-gps-start-btn"
+        onClick={handleStartGpsNavigation}
+        title="Iniciar Navegación GPS en vivo por Bariloche con indicaciones habladas"
+      >
+        <Navigation size={18} color="#031120" />
+        <span>🚗 Iniciar Navegación GPS (Prueba en Vivo)</span>
+      </button>
     </div>
   );
 
@@ -728,6 +796,7 @@ export default function DriverApp({ externalRide, onRideChange, viewMode = 'phon
           onDriverArrived={handleDriverArrived}
           onStartTrip={handleStartTrip}
           onCompleteTrip={handleCompleteTrip}
+          onCancelTrip={handleCancelTrip}
           viewMode={viewMode}
         />
       ) : isPhoneMode ? (

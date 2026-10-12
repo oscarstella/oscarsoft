@@ -45,9 +45,16 @@ class VoiceService {
   unlockAudio() {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     try {
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      if (synth.paused) {
+        synth.resume();
       }
+      // Audio priming para navegadores móviles y desktop
+      const primeUtterance = new SpeechSynthesisUtterance(' ');
+      primeUtterance.volume = 0.01;
+      primeUtterance.rate = 10;
+      synth.speak(primeUtterance);
     } catch {}
   }
 
@@ -128,12 +135,11 @@ class VoiceService {
 
     try {
       const synth = window.speechSynthesis;
+      if (options.interrupt !== false) {
+        synth.cancel();
+      }
       if (synth.paused) {
         synth.resume();
-      }
-
-      if (options.interrupt) {
-        synth.cancel();
       }
 
       const utterance = new SpeechSynthesisUtterance(cleanText);

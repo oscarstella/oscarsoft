@@ -1744,6 +1744,35 @@
   box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
 }
 
+.driver-gps-start-btn {
+  background: linear-gradient(135deg, #00e5ff 0%, #00b4d8 100%);
+  color: #031120;
+  font-weight: 800;
+  font-size: 0.88rem;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);
+  transition: all 0.2s ease;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.driver-gps-start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 229, 255, 0.6);
+  filter: brightness(1.08);
+}
+
+.driver-gps-start-btn:active {
+  transform: translateY(0);
+}
+
 /* Telemetría Ganancias */
 .driver-bottom-telemetry {
   position: absolute;
@@ -3586,6 +3615,17 @@
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.4);
   background: rgba(239, 68, 68, 0.12);
+}
+
+.gps-pill-btn.exit-gps-btn {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.gps-pill-btn.exit-gps-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
 }
 
 /* Dropdown de Pasos */
