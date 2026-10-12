@@ -132,48 +132,37 @@ class VoiceService {
         synth.resume();
       }
 
-      // En un GPS las instrucciones son prioritarias: cancelamos la locución previa
-      // para que el chofer no reciba giros con demora.
+      // Detenemos locución previa para dar paso a la instrucción actual
       synth.cancel();
 
-      // Pequeño retardo de 40ms para que Chrome/Safari liberen el canal de audio tras cancel()
-      setTimeout(() => {
-        try {
-          if (synth.paused) {
-            synth.resume();
-          }
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'es-AR';
+      utterance.rate = options.rate || 0.92;
+      utterance.pitch = options.pitch || 1.0;
+      utterance.volume = 1.0;
 
-          const utterance = new SpeechSynthesisUtterance(cleanText);
-          utterance.lang = 'es-AR';
-          utterance.rate = options.rate || 0.95;
-          utterance.pitch = options.pitch || 1.0;
-          utterance.volume = 1.0;
+      const voice = this.cachedVoice || this.findBestNaturalVoice();
+      if (voice) {
+        utterance.voice = voice;
+      }
 
-          const voice = this.cachedVoice || this.findBestNaturalVoice();
-          if (voice) {
-            utterance.voice = voice;
-          }
-
-          // Liveness watchdog para Chromium (despierta el motor si se duerme en frases largas)
-          const timer = setInterval(() => {
-            if (!synth.speaking) {
-              clearInterval(timer);
-            } else {
-              synth.resume();
-            }
-          }, 3000);
-
-          utterance.onend = () => clearInterval(timer);
-          utterance.onerror = (err) => {
-            clearInterval(timer);
-            console.warn('[VoiceService] Utterance error:', err);
-          };
-
-          synth.speak(utterance);
-        } catch (innerErr) {
-          console.warn('[VoiceService] Inner speak error:', innerErr);
+      // Chromium watchdog en locuciones largas
+      const timer = setInterval(() => {
+        if (!synth.speaking) {
+          clearInterval(timer);
+        } else {
+          synth.resume();
         }
-      }, 40);
+      }, 2500);
+
+      utterance.onend = () => clearInterval(timer);
+      utterance.onerror = (err) => {
+        clearInterval(timer);
+        console.warn('[VoiceService] Utterance error:', err);
+      };
+
+      // Invocación síncrona sin setTimeout para preservar el contexto de gesto en móviles
+      synth.speak(utterance);
     } catch (e) {
       console.warn('[VoiceService] Error:', e);
     }
@@ -200,7 +189,6 @@ class VoiceService {
   // Locución paso a paso de giro o maniobra
   speakTurnByTurn(instruction, distanceMeters = null) {
     if (!instruction) return;
-    soundService.playChimeTone();
     let text = instruction;
     if (distanceMeters && distanceMeters > 30) {
       text = `En ${distanceMeters} metros, ${instruction.toLowerCase()}`;

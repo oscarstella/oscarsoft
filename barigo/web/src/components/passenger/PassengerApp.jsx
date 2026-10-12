@@ -265,13 +265,15 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
     }
 
     const unsubscribe = syncService.subscribe((msg) => {
-      if (msg.type === 'RIDE_ACCEPTED' || msg.type === 'RIDE_ADVANCED' || msg.type === 'RIDE_UPDATED') {
+      if (msg.type === 'RIDE_ACCEPTED') {
         handleAccepted(msg.payload);
+      } else if (msg.type === 'RIDE_ADVANCED' || msg.type === 'RIDE_UPDATED') {
+        const ride = msg.payload;
+        if (ride) {
+          handleStatusChanged({ status: ride.status, ride });
+        }
       } else if (msg.type === 'RIDE_CANCELLED') {
-        setRideState(null);
-        setOneMinuteAlert(null);
-        setDriverAutoMessage(null);
-        if (onRideChange) onRideChange(null);
+        handleCancelled();
       } else if (msg.type === 'DRIVER_1MIN_ALERT') {
         handleOneMinuteAlert(msg.payload);
       }
@@ -425,6 +427,9 @@ export default function PassengerApp({ externalRide, onRideChange, viewMode = 'p
   const toggleVoice = () => {
     const newState = voiceService.toggle();
     setVoiceMuted(!newState);
+    if (newState) {
+      voiceService.speak("Asistencia por voz activada.");
+    }
   };
 
   const handleMapClick = async (point) => {

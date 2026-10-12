@@ -11,14 +11,11 @@ import {
   Volume2, 
   VolumeX, 
   Crosshair, 
-  ChevronDown, 
-  ChevronUp, 
   Clock, 
   MapPin, 
   Flag, 
   Car, 
-  Radio, 
-  ListOrdered
+  Radio
 } from 'lucide-react';
 import BarigoMap from '../BarigoMap';
 import { voiceService } from '../../services/voiceService';
@@ -50,7 +47,6 @@ export default function DriverGpsView({
   const [navEta, setNavEta] = useState({ mins: 3, km: 1.2 });
   const [navSteps, setNavSteps] = useState([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [showStepsList, setShowStepsList] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(false);
   const [oneMinAlertSent, setOneMinAlertSent] = useState(false);
   // Evita repetir la locución en cada actualización de GPS (una sola vez por viaje + fase)
@@ -84,10 +80,9 @@ export default function DriverGpsView({
               if (!voiceMuted) {
                 const firstStep = res.steps[0];
                 const nextStep = res.steps[1];
-                if (nextStep) {
-                  setTimeout(() => {
-                    voiceService.speakTurnByTurn(nextStep.instruction, firstStep.distanceMeters);
-                  }, 3000);
+                const stepToSpeak = nextStep || firstStep;
+                if (stepToSpeak?.instruction) {
+                  voiceService.speakTurnByTurn(stepToSpeak.instruction, firstStep?.distanceMeters);
                 }
               }
             }
@@ -134,10 +129,9 @@ export default function DriverGpsView({
               if (!voiceMuted) {
                 const firstStep = res.steps[0];
                 const nextStep = res.steps[1];
-                if (nextStep) {
-                  setTimeout(() => {
-                    voiceService.speakTurnByTurn(nextStep.instruction, firstStep.distanceMeters);
-                  }, 3000);
+                const stepToSpeak = nextStep || firstStep;
+                if (stepToSpeak?.instruction) {
+                  voiceService.speakTurnByTurn(stepToSpeak.instruction, firstStep?.distanceMeters);
                 }
               }
             }
@@ -202,6 +196,9 @@ export default function DriverGpsView({
   const toggleVoice = () => {
     const newState = voiceService.toggle();
     setVoiceMuted(!newState);
+    if (newState) {
+      voiceService.speak("Voz de navegación activada.");
+    }
   };
 
   const currentStep = navSteps[currentStepIndex] || {
@@ -296,7 +293,7 @@ export default function DriverGpsView({
               }}
               title="Escuchar indicación por voz"
             >
-              <Volume2 size={15} color="#00e5ff" />
+              <Volume2 size={16} color="#00e5ff" />
               <span>Escuchar</span>
             </button>
             {navSteps.length > 1 && (
@@ -306,6 +303,10 @@ export default function DriverGpsView({
                   voiceService.unlockAudio();
                   const nextIdx = (currentStepIndex + 1) % navSteps.length;
                   setCurrentStepIndex(nextIdx);
+                  const step = navSteps[nextIdx];
+                  if (step) {
+                    voiceService.speakTurnByTurn(step.instruction, step.distanceMeters);
+                  }
                 }}
                 title="Siguiente indicación de la ruta"
               >
@@ -313,53 +314,14 @@ export default function DriverGpsView({
               </button>
             )}
             <button 
-              className="gps-pill-btn" 
-              onClick={() => setShowStepsList(!showStepsList)}
-              title="Ver todas las indicaciones"
-            >
-              <ListOrdered size={15} />
-              <span>{showStepsList ? 'Ocultar' : 'Pasos'}</span>
-              {showStepsList ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            </button>
-            <button 
               className={`gps-pill-btn voice-btn ${voiceMuted ? 'muted' : ''}`}
               onClick={toggleVoice}
               title={voiceMuted ? "Activar voz" : "Silenciar voz"}
             >
-              {voiceMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              {voiceMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              <span>{voiceMuted ? 'Voz silenciada' : 'Voz activa'}</span>
             </button>
           </div>
-
-          {/* LISTA DESPLEGABLE DE PASOS GIRO A GIRO */}
-          {showStepsList && navSteps.length > 0 && (
-            <div className="gps-steps-dropdown animate-fade-in">
-              <div className="gps-steps-header">
-                <strong>Indicaciones de ruta completa (tocá para escuchar):</strong>
-              </div>
-              <div className="gps-steps-scroll">
-                {navSteps.map((st, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`gps-step-item ${idx === currentStepIndex ? 'current' : ''}`}
-                    onClick={() => {
-                      voiceService.unlockAudio();
-                      setCurrentStepIndex(idx);
-                      voiceService.speakTurnByTurn(st.instruction, st.distanceMeters);
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="st-icon">
-                      {renderManeuverIcon(st.modifier)}
-                    </div>
-                    <div className="st-info">
-                      <span className="st-desc">{st.instruction}</span>
-                      <span className="st-dist">{st.distanceMeters} metros</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* 📟 VELOCÍMETRO Y BRÚJULA FLOTANTE */}
