@@ -186,6 +186,14 @@ app.post('/api/contact', async (req, res) => {
 });
 
 // Proxy API requests from oscarsoft.com.ar/api/barigo al backend BariGo (puerto 5055)
+// Rutas API Ticket Patagonia (MariaDB + BBDD + CRUD)
+try {
+  const ticketPatagoniaRouter = require("./ticketpatagoniaRouter");
+  app.use("/api/ticketpatagonia", ticketPatagoniaRouter);
+} catch (e) {
+  console.error("Error loading ticketpatagoniaRouter:", e.message);
+}
+
 app.use('/api/barigo', async (req, res) => {
   try {
     const targetUrl = `http://127.0.0.1:5055/api${req.url}`;
