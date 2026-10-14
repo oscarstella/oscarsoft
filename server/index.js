@@ -233,6 +233,18 @@ if (fs.existsSync(barigoDistPath)) {
   });
 }
 
+// Servir Ticket Patagonia Web en /ticketpatagonia
+const ticketPatagoniaDistPath = path.join(__dirname, "../ticketpatagonia/dist");
+if (fs.existsSync(ticketPatagoniaDistPath)) {
+  app.use("/ticketpatagonia", express.static(ticketPatagoniaDistPath));
+  app.use((req, res, next) => {
+    if (req.originalUrl === "/ticketpatagonia" || req.originalUrl.startsWith("/ticketpatagonia/")) {
+      return res.sendFile(path.join(ticketPatagoniaDistPath, "index.html"));
+    }
+    next();
+  });
+}
+
 // Servir archivos estáticos del frontend principal React compilado
 const distPath = path.join(__dirname, '../client/dist');
 
